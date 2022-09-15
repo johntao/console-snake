@@ -8,16 +8,16 @@
 ### &emsp;&emsp;1.2) The config file should be in TOML format (cuz why not?!)
 ## 2) Game parameters
 ### &emsp;&emsp;2.1) Gameplay
-#### &emsp;&emsp;&emsp;&emsp;2.1.1) starting Length
-#### &emsp;&emsp;&emsp;&emsp;2.1.2) can hit wall
-#### &emsp;&emsp;&emsp;&emsp;2.1.3) (opt) add temporary objective
+#### &emsp;&emsp;&emsp;&emsp;2.1.1) starting length of the snake
+#### &emsp;&emsp;&emsp;&emsp;2.1.2) can go through the wall
+#### &emsp;&emsp;&emsp;&emsp;2.1.3) (optional) add temporary objective
 #### &emsp;&emsp;&emsp;&emsp;2.1.4) useSpeed
 #### &emsp;&emsp;&emsp;&emsp;2.1.5) useLevel
 ### &emsp;&emsp;2.2) GameplaySpeed
 #### &emsp;&emsp;&emsp;&emsp;2.2.1) Starting Speed
 #### &emsp;&emsp;&emsp;&emsp;2.2.2) use levels to boost speed
 #### &emsp;&emsp;&emsp;&emsp;2.2.3) whether arrow keys can boost speed
-#### &emsp;&emsp;&emsp;&emsp;2.2.4) (opt) speed boost for temporary objective
+#### &emsp;&emsp;&emsp;&emsp;2.2.4) (optional) speed boost for temporary objective
 ### &emsp;&emsp;2.3) GameplayLevel
 #### &emsp;&emsp;&emsp;&emsp;2.3.1) LevelSpeedDefinition
 #### &emsp;&emsp;&emsp;&emsp;2.3.2) Threshold
@@ -38,7 +38,7 @@
 ### &emsp;&emsp;3.6) definite level and speed booster
 ### &emsp;&emsp;3.7) game end on win/ loss condition
 ### &emsp;&emsp;3.8) user can start a new game after defeated
-### &emsp;&emsp;3.9) add win/ loss indicator
+### &emsp;&emsp;3.9) (optional) add win/ loss indicator
 ## 4) Code implementation
 ### &emsp;&emsp;4.1) the map should be a simple 2d array
 ### &emsp;&emsp;4.2) code should be as simple as possible
@@ -47,6 +47,7 @@
 #### &emsp;&emsp;&emsp;&emsp;4.4.1) should be easy to extend to multi-thread
 ### &emsp;&emsp;4.5) should use dependency injection
 ### &emsp;&emsp;4.6) configuration should be strongly typed
+### &emsp;&emsp;&emsp;&emsp;4.6.1) should be auto-mapped
 ### &emsp;&emsp;4.7) use latest language features if possible
 ### &emsp;&emsp;4.8) **NO PLANS** to improve the text rendering experience
 #### &emsp;&emsp;&emsp;&emsp;4.8.1) border should be rendered contiguously
