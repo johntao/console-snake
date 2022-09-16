@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Tomlyn;
 using Tomlyn.Extensions.Configuration;
-
 static class Config
 {
     internal readonly static int Bound, StartLen, Speed, Threshold, DefLevel;
@@ -12,11 +11,11 @@ static class Config
     static Config()
     {
         var path = Path.Join(Directory.GetCurrentDirectory(), "appsettings.toml");
-        TomlModelOptions opt = new() { ConvertPropertyName = q => q };
+        TomlModelOptions opt = new() { ConvertPropertyName = q => q, };
         if (!File.Exists(path))
         {
             var txt = Toml.FromModel(new ConfigPOCO(), opt);
-            File.WriteAllText(path, txt);
+            File.WriteAllText(path, TomlTableFormatHelper.Do(txt));
         }
         var config = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
