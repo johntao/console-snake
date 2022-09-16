@@ -1,3 +1,6 @@
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Unicode;
 using Microsoft.Extensions.Configuration;
 
 static class Config
@@ -9,6 +12,16 @@ static class Config
     internal readonly static bool CanSpeedUp, CanHitWall, UseBorder, UseSpeed, UseAcceleration, UseLevel;
     static Config()
     {
+        var path = Path.Join(Directory.GetCurrentDirectory(), "appsettings.json");
+        if (!File.Exists(path))
+        {
+            using var fs = File.Create(path);
+            JsonSerializer.Serialize<ConfigPOCO>(fs, new(), new JsonSerializerOptions
+            {
+                Encoder = JavaScriptEncoder.Create(UnicodeRanges.BasicLatin, UnicodeRanges.Latin1Supplement, UnicodeRanges.GeometricShapes),
+                WriteIndented = true
+            });
+        }
         var config = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
