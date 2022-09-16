@@ -1,7 +1,6 @@
-using System.Text.Encodings.Web;
-using System.Text.Json;
-using System.Text.Unicode;
 using Microsoft.Extensions.Configuration;
+using Tomlyn;
+using Tomlyn.Extensions.Configuration;
 
 static class Config
 {
@@ -12,19 +11,16 @@ static class Config
     internal readonly static bool CanSpeedUp, CanHitWall, UseBorder, UseSpeed, UseAcceleration, UseLevel;
     static Config()
     {
-        var path = Path.Join(Directory.GetCurrentDirectory(), "appsettings.json");
+        var path = Path.Join(Directory.GetCurrentDirectory(), "appsettings.toml");
+        TomlModelOptions opt = new() { ConvertPropertyName = q => q };
         if (!File.Exists(path))
         {
-            using var fs = File.Create(path);
-            JsonSerializer.Serialize<ConfigPOCO>(fs, new(), new JsonSerializerOptions
-            {
-                Encoder = JavaScriptEncoder.Create(UnicodeRanges.BasicLatin, UnicodeRanges.Latin1Supplement, UnicodeRanges.GeometricShapes),
-                WriteIndented = true
-            });
+            var txt = Toml.FromModel(new ConfigPOCO(), opt);
+            File.WriteAllText(path, txt);
         }
         var config = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+            .AddTomlFile("appsettings.toml", optional: true, reloadOnChange: true)
             .Build();
         Bound = int.Parse(config[nameof(Bound)]);
         StartLen = int.Parse(config[nameof(StartLen)]);

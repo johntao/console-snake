@@ -27,9 +27,9 @@ public class Level
 
 public class TileSet
 {
-    public char None { get; set; } = '·';
-    public char Body { get; set; } = '○';
-    public char Head { get; set; } = '●';
-    public char Crate { get; set; } = '▲';
-    public char Wall { get; set; } = '▣';
+    public string None { get; set; } = "·";
+    public string Body { get; set; } = "○";
+    public string Head { get; set; } = "●";
+    public string Crate { get; set; } = "▲";
+    public string Wall { get; set; } = "▣";
 }
