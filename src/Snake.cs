@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Timers;
+using Microsoft.Extensions.Options;
 
 class HighScore
 {
@@ -18,22 +19,35 @@ class HighScore
     }
     public override string ToString() => $"{Length}@{Time}";
 }
-static class Snake
+class Snake
 {
     static readonly Random Rand = new Random();
     static readonly Stopwatch Sw = new Stopwatch();
-    static readonly System.Timers.Timer Timer = new System.Timers.Timer(Config.Speed);
-    static readonly TileType[,] Arr = new TileType[Config.Bound, Config.Bound];
-    static readonly string Border = string.Join(' ', Enumerable.Repeat<char>(Config.Wall, Config.Bound + 2));
-    static int Len, Level = Config.DefaultLevel;
     static readonly HighScore HighScore = new();
     static string SpeedDisplay = string.Empty;
     static (int X, int Y) Head, Crate;
     static SpeedDirection Dir;
     static readonly ConcurrentQueue<(int X, int Y)> Steps = new ConcurrentQueue<(int X, int Y)>();
-    internal static void Start()
+    readonly System.Timers.Timer Timer;
+    readonly TileType[,] Arr;
+    readonly string Border;
+    int Len, Level;
+    readonly ConfigPOCO _opt;
+    readonly Level _optLvl;
+    readonly TileSet _optTs;
+    public Snake(IOptions<ConfigPOCO> cfg)
     {
-        if (Config.CanMarchByTimer)
+        _opt = cfg.Value;
+        _optLvl = _opt.Level;
+        _optTs = _opt.TileSet;
+        Level = _optLvl.DefaultLevel;
+        Timer = new System.Timers.Timer(_opt.Speed);
+        Arr = new TileType[_opt.Bound, _opt.Bound];
+        Border = string.Join(' ', Enumerable.Repeat<string>(_optTs.Wall, _opt.Bound + 2));
+    }
+    internal void Start()
+    {
+        if (_opt.CanMarchByTimer)
         {
             Timer.Elapsed += March;
             Timer.Enabled = true;
@@ -66,35 +80,35 @@ static class Snake
             March(null, EventArgs.Empty);
         }
     }
-    static void March(object? sender, EventArgs e)
+    void March(object? sender, EventArgs e)
     {
         bool isMarchByKey = sender == null;
-        if (isMarchByKey && !Config.CanMarchByKey) return;
+        if (isMarchByKey && !_opt.CanMarchByKey) return;
         if (Dir == SpeedDirection.None) return;
         if (!Sw.IsRunning) Sw.Restart();
         switch (Dir)
         {
             case SpeedDirection.Up:
                 // forbid run out of border
-                if (!Config.CanHitWall && Head.Y == Arr.GetLowerBound(1)) { Reset(); return; }
+                if (!_opt.CanHitWall && Head.Y == Arr.GetLowerBound(1)) { Reset(); return; }
                 // set previous node from head to body
                 Arr[Head.X, Head.Y--] = TileType.Body;
-                if (Config.CanHitWall && Head.Y < Arr.GetLowerBound(1)) Head.Y = Arr.GetUpperBound(1);
+                if (_opt.CanHitWall && Head.Y < Arr.GetLowerBound(1)) Head.Y = Arr.GetUpperBound(1);
                 break;
             case SpeedDirection.Down:
-                if (!Config.CanHitWall && Head.Y == Arr.GetUpperBound(1)) { Reset(); return; }
+                if (!_opt.CanHitWall && Head.Y == Arr.GetUpperBound(1)) { Reset(); return; }
                 Arr[Head.X, Head.Y++] = TileType.Body;
-                if (Config.CanHitWall && Head.Y > Arr.GetUpperBound(1)) Head.Y = Arr.GetLowerBound(1);
+                if (_opt.CanHitWall && Head.Y > Arr.GetUpperBound(1)) Head.Y = Arr.GetLowerBound(1);
                 break;
             case SpeedDirection.Left:
-                if (!Config.CanHitWall && Head.X == Arr.GetLowerBound(0)) { Reset(); return; }
+                if (!_opt.CanHitWall && Head.X == Arr.GetLowerBound(0)) { Reset(); return; }
                 Arr[Head.X--, Head.Y] = TileType.Body;
-                if (Config.CanHitWall && Head.X < Arr.GetLowerBound(0)) Head.X = Arr.GetUpperBound(0);
+                if (_opt.CanHitWall && Head.X < Arr.GetLowerBound(0)) Head.X = Arr.GetUpperBound(0);
                 break;
             case SpeedDirection.Right:
-                if (!Config.CanHitWall && Head.X == Arr.GetUpperBound(0)) { Reset(); return; }
+                if (!_opt.CanHitWall && Head.X == Arr.GetUpperBound(0)) { Reset(); return; }
                 Arr[Head.X++, Head.Y] = TileType.Body;
-                if (Config.CanHitWall && Head.X > Arr.GetUpperBound(0)) Head.X = Arr.GetLowerBound(0);
+                if (_opt.CanHitWall && Head.X > Arr.GetUpperBound(0)) Head.X = Arr.GetLowerBound(0);
                 break;
         }
         if (Head == Crate)
@@ -112,26 +126,26 @@ static class Snake
         }
         Render();
     }
-    static void NextCrate()
+    void NextCrate()
     {
-        if ((++Len % Config.Threshold) == 0
-            && Config.UseLevel
-            && (Level + 1) < Config.Levels.Length)
+        if ((++Len % _optLvl.Threshold) == 0
+            && _opt.UseLevel
+            && (Level + 1) < _optLvl.Levels.Count)
         {
-            var speedLevel = Config.Levels[++Level];
-            if (Config.CanMarchByTimer && Config.UseAcceleration)
+            var speedLevel = _optLvl.Levels[++Level];
+            if (_opt.CanMarchByTimer && _opt.UseAcceleration)
             {
-                SpeedDisplay = $"{Config.Speed / 1000}x{speedLevel}";
-                Timer.Interval = Config.Speed / speedLevel;
+                SpeedDisplay = $"{_opt.Speed / 1000}x{speedLevel}";
+                Timer.Interval = _opt.Speed / speedLevel;
             }
         }
-        Crate = NextCrate(Config.Bound);
+        Crate = NextCrate(_opt.Bound);
         while (Arr[Crate.X, Crate.Y] > 0)
-            Crate = NextCrate(Config.Bound);
+            Crate = NextCrate(_opt.Bound);
         Arr[Crate.X, Crate.Y] = TileType.Crate;
     }
     static (int X, int Y) NextCrate(int max) => (Rand.Next(max), Rand.Next(max));
-    static void Reset()
+    void Reset()
     {
         Array.Clear(Arr, 0, Arr.Length);
         Steps.Clear();
@@ -139,54 +153,54 @@ static class Snake
         Arr[0, 0] = TileType.Head;
         Head = default;
         Crate = default;
-        Level = Config.DefaultLevel;
-        SpeedDisplay = $"{Config.Speed / 1000}x1";
-        Timer.Interval = Config.Speed;
+        Level = _optLvl.DefaultLevel;
+        SpeedDisplay = $"{_opt.Speed / 1000}x1";
+        Timer.Interval = _opt.Speed;
         Steps.Enqueue(Head);
         HighScore.SetHighScore(Len, Sw);
-        Len = Config.StartLen;
+        Len = _opt.StartLen;
         while (Crate == default)
-            Crate = NextCrate(Config.Bound);
+            Crate = NextCrate(_opt.Bound);
         Arr[Crate.X, Crate.Y] = TileType.Crate;
 
         Render();
     }
-    static void Render()
+    void Render()
     {
         Console.Clear();
-        if (Config.UseDashboard) RendorDashboard();
-        if (Config.UseBorder) Console.WriteLine(Border);
+        if (_opt.UseDashboard) RendorDashboard();
+        if (_opt.UseBorder) Console.WriteLine(Border);
         for (int x = 0; x <= Arr.GetUpperBound(0); x++)
         {
-            if (Config.UseBorder) Console.Write(Config.Wall + " ");
+            if (_opt.UseBorder) Console.Write(_optTs.Wall + " ");
             for (int y = 0; y <= Arr.GetUpperBound(1); y++)
             {
                 Console.Write(Arr[y, x] switch
                 {
-                    TileType.Crate => Config.Tiles[3],
-                    TileType.Head => Config.Tiles[2],
-                    TileType.Body => Config.Tiles[1],
-                    _ => Config.Tiles[0]
+                    TileType.Crate => _optTs.Crate,
+                    TileType.Head => _optTs.Head,
+                    TileType.Body => _optTs.Body,
+                    _ => _optTs.None
                 });
                 Console.Write(' ');
             }
-            if (Config.UseBorder) Console.Write(Config.Wall);
+            if (_opt.UseBorder) Console.Write(_optTs.Wall);
             Console.WriteLine();
         }
-        if (Config.UseBorder) Console.WriteLine(Border);
+        if (_opt.UseBorder) Console.WriteLine(Border);
         Console.WriteLine();
     }
-    static void RendorDashboard()
+    void RendorDashboard()
     {
         //Level, Speed, Length, Time, HighScore
         var headers = new List<string> { "Speed", "Len", "Time ", "HighScore" };
-        if (Config.UseLevel) headers.Insert(0, "Lvl");
+        if (_opt.UseLevel) headers.Insert(0, "Lvl");
         var headline = $"| {string.Join(" | ", headers)} |";
         var seperate = new string(headline.Select(q => q == '|' ? '|' : '-').ToArray());
 
         var lens = headers.Select(q => q.Length).ToArray();
         var vals = new List<string> { SpeedDisplay, Len + "", Sw.Elapsed.ToString("mm\\:ss"), HighScore + "" };
-        if (Config.UseLevel) vals.Insert(0, Level + "");
+        if (_opt.UseLevel) vals.Insert(0, Level + "");
         var qq = lens.Zip(vals, (q, w) => w.PadLeft(q));
         var bodyline = $"| {string.Join(" | ", qq)} |";
 
