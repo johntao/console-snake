@@ -11,7 +11,7 @@ using IHost host = Host.CreateDefaultBuilder(args)
         if (!File.Exists(path))
         {
             TomlModelOptions opt = new() { ConvertPropertyName = q => q, };
-            var toml = Toml.FromModel(new ConfigPOCO(), opt);
+            var toml = Toml.FromModel(new Config(), opt);
             File.WriteAllText(path, TomlTableFormatHelper.Do(toml));
         }
         q.SetBasePath(Directory.GetCurrentDirectory())
@@ -19,7 +19,8 @@ using IHost host = Host.CreateDefaultBuilder(args)
     })
     .ConfigureServices((q, s) => s
         .AddSingleton<Snake>()
-        .Configure<ConfigPOCO>(q.Configuration)
+        .Configure<Config>(q.Configuration)
+        .Configure<Config>(q => q.GameplayMotor.MotorEnum = (MotorEnum)q.GameplayMotor.MotorType)
         )
     .Build();
 var game = host.Services.GetRequiredService<Snake>();

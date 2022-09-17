@@ -32,22 +32,28 @@ class Snake
     readonly TileType[,] Arr;
     readonly string Border;
     int Len, Level;
-    readonly ConfigPOCO _opt;
-    readonly Level _optLvl;
-    readonly TileSet _optTs;
-    public Snake(IOptions<ConfigPOCO> cfg)
+    readonly Gameplay _opt;
+    readonly GameplayLevel _lvl;
+    readonly GameplayMotor _motor;
+    readonly Visual _visual;
+    readonly VisualMap _map;
+    public Snake(IOptions<Config> cfg)
     {
-        _opt = cfg.Value;
-        _optLvl = _opt.Level;
-        _optTs = _opt.TileSet;
-        Level = _optLvl.DefaultLevel;
-        Timer = new System.Timers.Timer(_opt.Speed);
-        Arr = new TileType[_opt.Bound, _opt.Bound];
-        Border = string.Join(' ', Enumerable.Repeat<string>(_optTs.Wall, _opt.Bound + 2));
+        var q = cfg.Value;
+        _opt = q.Gameplay;
+        _lvl = q.GameplayLevel;
+        _motor = q.GameplayMotor;
+        _visual = q.Visual;
+        _map = q.VisualMap;
+        Level = _lvl.DefaultLevel;
+        Timer = new System.Timers.Timer(_motor.StartingSpeed);
+        Arr = new TileType[_map.SideLength, _map.SideLength];
+        Border = string.Join(' ', Enumerable.Repeat<string>(_map.Wall, _map.SideLength + 2));
     }
     internal void Start()
     {
-        if (_opt.CanMarchByTimer)
+        bool canMarchByTimer = (_motor.MotorEnum & MotorEnum.ByTimer) > 0;
+        if (canMarchByTimer)
         {
             Timer.Elapsed += March;
             Timer.Enabled = true;
@@ -83,32 +89,33 @@ class Snake
     void March(object? sender, EventArgs e)
     {
         bool isMarchByKey = sender == null;
-        if (isMarchByKey && !_opt.CanMarchByKey) return;
+        bool canMarchByKey = (_motor.MotorEnum & MotorEnum.ByKey) > 0;
+        if (isMarchByKey && !canMarchByKey) return;
         if (Dir == SpeedDirection.None) return;
         if (!Sw.IsRunning) Sw.Restart();
         switch (Dir)
         {
             case SpeedDirection.Up:
                 // forbid run out of border
-                if (!_opt.CanHitWall && Head.Y == Arr.GetLowerBound(1)) { Reset(); return; }
+                if (!_opt.CanPassWall && Head.Y == Arr.GetLowerBound(1)) { Reset(); return; }
                 // set previous node from head to body
                 Arr[Head.X, Head.Y--] = TileType.Body;
-                if (_opt.CanHitWall && Head.Y < Arr.GetLowerBound(1)) Head.Y = Arr.GetUpperBound(1);
+                if (_opt.CanPassWall && Head.Y < Arr.GetLowerBound(1)) Head.Y = Arr.GetUpperBound(1);
                 break;
             case SpeedDirection.Down:
-                if (!_opt.CanHitWall && Head.Y == Arr.GetUpperBound(1)) { Reset(); return; }
+                if (!_opt.CanPassWall && Head.Y == Arr.GetUpperBound(1)) { Reset(); return; }
                 Arr[Head.X, Head.Y++] = TileType.Body;
-                if (_opt.CanHitWall && Head.Y > Arr.GetUpperBound(1)) Head.Y = Arr.GetLowerBound(1);
+                if (_opt.CanPassWall && Head.Y > Arr.GetUpperBound(1)) Head.Y = Arr.GetLowerBound(1);
                 break;
             case SpeedDirection.Left:
-                if (!_opt.CanHitWall && Head.X == Arr.GetLowerBound(0)) { Reset(); return; }
+                if (!_opt.CanPassWall && Head.X == Arr.GetLowerBound(0)) { Reset(); return; }
                 Arr[Head.X--, Head.Y] = TileType.Body;
-                if (_opt.CanHitWall && Head.X < Arr.GetLowerBound(0)) Head.X = Arr.GetUpperBound(0);
+                if (_opt.CanPassWall && Head.X < Arr.GetLowerBound(0)) Head.X = Arr.GetUpperBound(0);
                 break;
             case SpeedDirection.Right:
-                if (!_opt.CanHitWall && Head.X == Arr.GetUpperBound(0)) { Reset(); return; }
+                if (!_opt.CanPassWall && Head.X == Arr.GetUpperBound(0)) { Reset(); return; }
                 Arr[Head.X++, Head.Y] = TileType.Body;
-                if (_opt.CanHitWall && Head.X > Arr.GetUpperBound(0)) Head.X = Arr.GetLowerBound(0);
+                if (_opt.CanPassWall && Head.X > Arr.GetUpperBound(0)) Head.X = Arr.GetLowerBound(0);
                 break;
         }
         if (Head == Crate)
@@ -128,20 +135,21 @@ class Snake
     }
     void NextCrate()
     {
-        if ((++Len % _optLvl.Threshold) == 0
+        if ((++Len % _lvl.Threshold) == 0
             && _opt.UseLevel
-            && (Level + 1) < _optLvl.Levels.Count)
+            && (Level + 1) < _lvl.Levels.Count)
         {
-            var speedLevel = _optLvl.Levels[++Level];
-            if (_opt.CanMarchByTimer && _opt.UseAcceleration)
+            var speedLevel = _lvl.Levels[++Level];
+            bool canMarchByTimer = (_motor.MotorEnum & MotorEnum.ByTimer) > 0;
+            if (canMarchByTimer && _motor.UseLevelAccelerator)
             {
-                SpeedDisplay = $"{_opt.Speed / 1000}x{speedLevel}";
-                Timer.Interval = _opt.Speed / speedLevel;
+                SpeedDisplay = $"{_motor.StartingSpeed / 1000}x{speedLevel}";
+                Timer.Interval = _motor.StartingSpeed / speedLevel;
             }
         }
-        Crate = NextCrate(_opt.Bound);
+        Crate = NextCrate(_map.SideLength);
         while (Arr[Crate.X, Crate.Y] > 0)
-            Crate = NextCrate(_opt.Bound);
+            Crate = NextCrate(_map.SideLength);
         Arr[Crate.X, Crate.Y] = TileType.Crate;
     }
     static (int X, int Y) NextCrate(int max) => (Rand.Next(max), Rand.Next(max));
@@ -153,14 +161,14 @@ class Snake
         Arr[0, 0] = TileType.Head;
         Head = default;
         Crate = default;
-        Level = _optLvl.DefaultLevel;
-        SpeedDisplay = $"{_opt.Speed / 1000}x1";
-        Timer.Interval = _opt.Speed;
+        Level = _lvl.DefaultLevel;
+        SpeedDisplay = $"{_motor.StartingSpeed / 1000}x1";
+        Timer.Interval = _motor.StartingSpeed;
         Steps.Enqueue(Head);
         HighScore.SetHighScore(Len, Sw);
-        Len = _opt.StartLen;
+        Len = _opt.StartingLength;
         while (Crate == default)
-            Crate = NextCrate(_opt.Bound);
+            Crate = NextCrate(_map.SideLength);
         Arr[Crate.X, Crate.Y] = TileType.Crate;
 
         Render();
@@ -168,26 +176,26 @@ class Snake
     void Render()
     {
         Console.Clear();
-        if (_opt.UseDashboard) RendorDashboard();
-        if (_opt.UseBorder) Console.WriteLine(Border);
+        if (_visual.UseDashboard) RendorDashboard();
+        if (_visual.UseBorder) Console.WriteLine(Border);
         for (int x = 0; x <= Arr.GetUpperBound(0); x++)
         {
-            if (_opt.UseBorder) Console.Write(_optTs.Wall + " ");
+            if (_visual.UseBorder) Console.Write(_map.Wall + " ");
             for (int y = 0; y <= Arr.GetUpperBound(1); y++)
             {
                 Console.Write(Arr[y, x] switch
                 {
-                    TileType.Crate => _optTs.Crate,
-                    TileType.Head => _optTs.Head,
-                    TileType.Body => _optTs.Body,
-                    _ => _optTs.None
+                    TileType.Crate => _map.Crate,
+                    TileType.Head => _map.Head,
+                    TileType.Body => _map.Body,
+                    _ => _map.None
                 });
                 Console.Write(' ');
             }
-            if (_opt.UseBorder) Console.Write(_optTs.Wall);
+            if (_visual.UseBorder) Console.Write(_map.Wall);
             Console.WriteLine();
         }
-        if (_opt.UseBorder) Console.WriteLine(Border);
+        if (_visual.UseBorder) Console.WriteLine(Border);
         Console.WriteLine();
     }
     void RendorDashboard()
