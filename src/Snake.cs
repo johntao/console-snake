@@ -19,6 +19,7 @@ class HighScore
     }
     public override string ToString() => $"{Length}@{Time}";
 }
+class ExceedBorder : Exception { }
 class Snake
 {
     static readonly Random Rand = new Random();
@@ -40,11 +41,7 @@ class Snake
     public Snake(IOptions<Config> cfg)
     {
         var q = cfg.Value;
-        _opt = q.Gameplay;
-        _lvl = q.GameplayLevel;
-        _motor = q.GameplayMotor;
-        _visual = q.Visual;
-        _map = q.VisualMap;
+        (_opt, _lvl, _motor, _visual, _map) = q;
         Level = _lvl.DefaultLevel;
         Timer = new System.Timers.Timer(_motor.StartingSpeed);
         Arr = new TileType[_map.SideLength, _map.SideLength];
@@ -58,33 +55,22 @@ class Snake
             Timer.Elapsed += March;
             Timer.Enabled = true;
         }
-
         Reset();
         while (true)
         {
             var key = Console.ReadKey().Key;
-            switch (key)
-            {
-                case ConsoleKey.Escape: return;
-                case ConsoleKey.UpArrow:
-                case ConsoleKey.W:
-                    if (Dir == SpeedDirection.Down) continue;
-                    Dir = SpeedDirection.Up; break;
-                case ConsoleKey.DownArrow:
-                case ConsoleKey.S:
-                    if (Dir == SpeedDirection.Up) continue;
-                    Dir = SpeedDirection.Down; break;
-                case ConsoleKey.LeftArrow:
-                case ConsoleKey.A:
-                    if (Dir == SpeedDirection.Right) continue;
-                    Dir = SpeedDirection.Left; break;
-                case ConsoleKey.RightArrow:
-                case ConsoleKey.D:
-                    if (Dir == SpeedDirection.Left) continue;
-                    Dir = SpeedDirection.Right; break;
-            }
+            if (key is ConsoleKey.Escape) return;
+            Dir = ChangeDirection(key, Dir);
             March(null, EventArgs.Empty);
         }
+        static SpeedDirection ChangeDirection(ConsoleKey key, SpeedDirection dir) => key switch
+        {
+            ConsoleKey.UpArrow or ConsoleKey.W when dir is not SpeedDirection.Down => SpeedDirection.Up,
+            ConsoleKey.DownArrow or ConsoleKey.S when dir is not SpeedDirection.Up => SpeedDirection.Down,
+            ConsoleKey.LeftArrow or ConsoleKey.A when dir is not SpeedDirection.Right => SpeedDirection.Left,
+            ConsoleKey.RightArrow or ConsoleKey.D when dir is not SpeedDirection.Left => SpeedDirection.Right,
+            _ => dir
+        };
     }
     void March(object? sender, EventArgs e)
     {
@@ -93,37 +79,16 @@ class Snake
         if (isMarchByKey && !canMarchByKey) return;
         if (Dir == SpeedDirection.None) return;
         if (!Sw.IsRunning) Sw.Restart();
-        switch (Dir)
-        {
-            case SpeedDirection.Up:
-                // forbid run out of border
-                if (!_opt.CanPassWall && Head.Y == Arr.GetLowerBound(1)) { Reset(); return; }
-                // set previous node from head to body
-                Arr[Head.X, Head.Y--] = TileType.Body;
-                if (_opt.CanPassWall && Head.Y < Arr.GetLowerBound(1)) Head.Y = Arr.GetUpperBound(1);
-                break;
-            case SpeedDirection.Down:
-                if (!_opt.CanPassWall && Head.Y == Arr.GetUpperBound(1)) { Reset(); return; }
-                Arr[Head.X, Head.Y++] = TileType.Body;
-                if (_opt.CanPassWall && Head.Y > Arr.GetUpperBound(1)) Head.Y = Arr.GetLowerBound(1);
-                break;
-            case SpeedDirection.Left:
-                if (!_opt.CanPassWall && Head.X == Arr.GetLowerBound(0)) { Reset(); return; }
-                Arr[Head.X--, Head.Y] = TileType.Body;
-                if (_opt.CanPassWall && Head.X < Arr.GetLowerBound(0)) Head.X = Arr.GetUpperBound(0);
-                break;
-            case SpeedDirection.Right:
-                if (!_opt.CanPassWall && Head.X == Arr.GetUpperBound(0)) { Reset(); return; }
-                Arr[Head.X++, Head.Y] = TileType.Body;
-                if (_opt.CanPassWall && Head.X > Arr.GetUpperBound(0)) Head.X = Arr.GetLowerBound(0);
-                break;
-        }
+        Arr[Head.X, Head.Y] = TileType.Body;
+        Func<SpeedDirection, TileType[,], (int X, int Y)> marchForward = _opt.CanPassWall ? CanPassWall : CanNotPassWall;
+        try { (Head.X, Head.Y) = marchForward(Dir, Arr); }
+        catch (ExceedBorder) { Reset(); return; }
         if (Head == Crate)
         {
-            if (Steps.Count == Arr.Length - 1) { ++Len; Reset(); return; }
+            if (Steps.Count == Arr.Length - 1) { ++Len; Reset(); return; } // Win condition
             NextCrate();
         }
-        if (Arr[Head.X, Head.Y] == TileType.Body) { Reset(); return; }
+        if (Arr[Head.X, Head.Y] == TileType.Body) { Reset(); return; } // Loss condition
         Steps.Enqueue(Head);
         Arr[Head.X, Head.Y] = TileType.Head;
         if (Steps.Count > Len)
@@ -132,11 +97,27 @@ class Snake
             if (isOut) Arr[step.X, step.Y] = TileType.None;
         }
         Render();
+        static (int X, int Y) CanNotPassWall(SpeedDirection dir, TileType[,] arr) => dir switch
+        {
+            SpeedDirection.Up when Head.Y-- == arr.GetLowerBound(1) => throw new ExceedBorder(),
+            SpeedDirection.Down when Head.Y++ == arr.GetUpperBound(1) => throw new ExceedBorder(),
+            SpeedDirection.Left when Head.X-- == arr.GetLowerBound(0) => throw new ExceedBorder(),
+            SpeedDirection.Right when Head.X++ == arr.GetUpperBound(0) => throw new ExceedBorder(),
+            _ => Head
+        };
+        static (int X, int Y) CanPassWall(SpeedDirection dir, TileType[,] arr) => dir switch
+        {
+            SpeedDirection.Up when --Head.Y < arr.GetLowerBound(1) => (Head.X, arr.GetUpperBound(1)),
+            SpeedDirection.Down when ++Head.Y > arr.GetUpperBound(1) => (Head.X, arr.GetLowerBound(1)),
+            SpeedDirection.Left when --Head.X < arr.GetLowerBound(0) => (arr.GetUpperBound(0), Head.Y),
+            SpeedDirection.Right when ++Head.X > arr.GetUpperBound(0) => (arr.GetLowerBound(0), Head.Y),
+            _ => Head
+        };
     }
     void NextCrate()
     {
-        if ((++Len % _lvl.Threshold) == 0
-            && _opt.UseLevel
+        if (_opt.UseLevel
+            && (++Len % _lvl.Threshold) == 0
             && (Level + 1) < _lvl.Levels.Count)
         {
             var speedLevel = _lvl.Levels[++Level];
@@ -170,7 +151,6 @@ class Snake
         while (Crate == default)
             Crate = NextCrate(_map.SideLength);
         Arr[Crate.X, Crate.Y] = TileType.Crate;
-
         Render();
     }
     void Render()

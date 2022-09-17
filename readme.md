@@ -11,12 +11,11 @@
 #### &emsp;&emsp;&emsp;&emsp;2.1.1) starting length of the snake
 #### &emsp;&emsp;&emsp;&emsp;2.1.2) can go through the wall
 #### &emsp;&emsp;&emsp;&emsp;2.1.3) (optional) add temporary objective
-#### &emsp;&emsp;&emsp;&emsp;2.1.4) useSpeed
-#### &emsp;&emsp;&emsp;&emsp;2.1.5) useLevel
+#### &emsp;&emsp;&emsp;&emsp;2.1.4) useLevel
 ### &emsp;&emsp;2.2) GameplaySpeed
 #### &emsp;&emsp;&emsp;&emsp;2.2.1) Starting Speed
 #### &emsp;&emsp;&emsp;&emsp;2.2.2) use levels to boost speed
-#### &emsp;&emsp;&emsp;&emsp;2.2.3) whether arrow keys can boost speed
+#### &emsp;&emsp;&emsp;&emsp;2.2.3) motor type (ByKey, ByTimer, ByBoth)
 #### &emsp;&emsp;&emsp;&emsp;2.2.4) (optional) speed boost for temporary objective
 ### &emsp;&emsp;2.3) GameplayLevel
 #### &emsp;&emsp;&emsp;&emsp;2.3.1) LevelSpeedDefinition

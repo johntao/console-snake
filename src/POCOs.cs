@@ -12,6 +12,9 @@ public class Config
     public GameplayMotor GameplayMotor { get; set; } = new();
     public Visual Visual { get; set; } = new();
     public VisualMap VisualMap { get; set; } = new();
+    public void Deconstruct(out Gameplay gameplay, out GameplayLevel gameplayLevel, out GameplayMotor gameplayMotor, out Visual visual, out VisualMap visualMap) =>
+    (gameplay, gameplayLevel, gameplayMotor, visual, visualMap) =
+    (Gameplay, GameplayLevel, GameplayMotor, Visual, VisualMap);
 }
 
 public class Gameplay
