@@ -9,13 +9,13 @@ static class Snake
     static readonly System.Timers.Timer Timer = new System.Timers.Timer(Config.Speed);
     static readonly TileType[,] Arr = new TileType[Config.Bound, Config.Bound];
     static readonly string Border = string.Join(' ', Enumerable.Repeat<char>(Config.Wall, Config.Bound + 2));
-    static int Len, HighScore, Level = Config.DefLevel;
+    static int Len, HighScore, Level = Config.DefaultLevel;
     static (int X, int Y) Head, Crate;
     static SpeedDirection Dir;
     static readonly ConcurrentQueue<(int X, int Y)> Steps = new ConcurrentQueue<(int X, int Y)>();
     internal static void Start()
     {
-        if (Config.UseSpeed)
+        if (Config.CanMarchByTimer)
         {
             Timer.Elapsed += March;
             Timer.Enabled = true;
@@ -45,12 +45,12 @@ static class Snake
                     if (Dir == SpeedDirection.Left) continue;
                     Dir = SpeedDirection.Right; break;
             }
-            March(null, ElapsedEventArgs.Empty);
+            March(null, EventArgs.Empty);
         }
     }
     static void March(object? sender, EventArgs e)
     {
-        if (!Config.CanSpeedUp && !(e is ElapsedEventArgs)) return;
+        if (!Config.CanMarchByKey && !(e is ElapsedEventArgs)) return;
         if (Dir == SpeedDirection.None) return;
         if (!Sw.IsRunning) Sw.Restart();
         switch (Dir)
@@ -100,7 +100,7 @@ static class Snake
             && (Level + 1) < Config.Levels.Length)
         {
             var lvl = Config.Levels[++Level];
-            if (Config.UseSpeed && Config.UseAcceleration) Timer.Interval = Config.Speed / lvl;
+            if (Config.CanMarchByTimer && Config.UseAcceleration) Timer.Interval = Config.Speed / lvl;
         }
         Crate = NextCrate(Config.Bound);
         while (Arr[Crate.X, Crate.Y] > 0)
@@ -116,7 +116,7 @@ static class Snake
         Arr[0, 0] = TileType.Head;
         Head = default;
         Crate = default;
-        Level = Config.DefLevel;
+        Level = Config.DefaultLevel;
         Timer.Interval = Config.Speed;
         Steps.Enqueue(Head);
         if (Len > HighScore) HighScore = Len;

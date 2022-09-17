@@ -3,11 +3,11 @@ using Tomlyn;
 using Tomlyn.Extensions.Configuration;
 static class Config
 {
-    internal readonly static int Bound, StartLen, Speed, Threshold, DefLevel;
+    internal readonly static int Bound, StartLen, Speed, Threshold, DefaultLevel;
     internal readonly static char[] Tiles = new char[Enum.GetValues(typeof(TileType)).Length];
     internal readonly static double[] Levels;
     internal readonly static char Wall;
-    internal readonly static bool CanSpeedUp, CanHitWall, UseBorder, UseSpeed, UseAcceleration, UseLevel, UseDashboard;
+    internal readonly static bool CanMarchByKey, CanHitWall, UseBorder, CanMarchByTimer, UseAcceleration, UseLevel, UseDashboard;
     static Config()
     {
         var path = Path.Join(Directory.GetCurrentDirectory(), "appsettings.toml");
@@ -24,10 +24,10 @@ static class Config
         Bound = int.Parse(config[nameof(Bound)]);
         StartLen = int.Parse(config[nameof(StartLen)]);
         Speed = int.Parse(config[nameof(Speed)]);
-        CanSpeedUp = bool.Parse(config[nameof(CanSpeedUp)]);
+        CanMarchByKey = bool.Parse(config[nameof(CanMarchByKey)]);
         CanHitWall = bool.Parse(config[nameof(CanHitWall)]);
         UseBorder = bool.Parse(config[nameof(UseBorder)]);
-        UseSpeed = bool.Parse(config[nameof(UseSpeed)]);
+        CanMarchByTimer = bool.Parse(config[nameof(CanMarchByTimer)]);
         UseLevel = bool.Parse(config[nameof(UseLevel)]);
         UseDashboard = bool.Parse(config[nameof(UseDashboard)]);
         UseAcceleration = bool.Parse(config[nameof(UseAcceleration)]);
@@ -38,7 +38,7 @@ static class Config
         Tiles[(int)TileType.Crate] = char.Parse(set[nameof(TileType.Crate)]);
         Wall = char.Parse(set[nameof(Wall)]);
         var level = config.GetSection("Level");
-        DefLevel = int.Parse(level[nameof(DefLevel)]);
+        DefaultLevel = int.Parse(level[nameof(DefaultLevel)]);
         Threshold = int.Parse(level[nameof(Threshold)]);
         Levels = Array.ConvertAll(level.GetSection(nameof(Levels)).GetChildren().Select(q => q.Value).ToArray(), double.Parse);
     }
