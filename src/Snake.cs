@@ -116,8 +116,8 @@ class Snake
     }
     void NextCrate()
     {
-        if (_opt.UseLevel
-            && (++Len % _lvl.Threshold) == 0
+        if ((++Len % _lvl.Threshold) == 0
+            && _opt.UseLevel
             && (Level + 1) < _lvl.Levels.Count)
         {
             var speedLevel = _lvl.Levels[++Level];

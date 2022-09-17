@@ -41,17 +41,21 @@
 ## 4) Code implementation
 ### &emsp;&emsp;4.1) the map should be a simple 2d array
 ### &emsp;&emsp;4.2) code should be as simple as possible
+#### &emsp;&emsp;&emsp;&emsp;4.2.1) (optional) split Snake into smaller pieces
 ### &emsp;&emsp;4.3) **NO PLANS** to run TDD or DDD
 ### &emsp;&emsp;4.4) thread usage as less as possible
 #### &emsp;&emsp;&emsp;&emsp;4.4.1) should be easy to extend to multi-thread
 ### &emsp;&emsp;4.5) should use dependency injection
 ### &emsp;&emsp;4.6) configuration should be strongly typed
 ### &emsp;&emsp;&emsp;&emsp;4.6.1) should be auto-mapped
+### &emsp;&emsp;&emsp;&emsp;4.6.2) should support hot-reload
 ### &emsp;&emsp;4.7) use latest language features if possible
+#### &emsp;&emsp;&emsp;&emsp;4.7.1) (optional) replace 2d array by jagged array to use indices
 ### &emsp;&emsp;4.8) **NO PLANS** to improve the text rendering experience
 #### &emsp;&emsp;&emsp;&emsp;4.8.1) border should be rendered contiguously
 #### &emsp;&emsp;&emsp;&emsp;4.8.2) handle half-width, full-width char gracefully
 #### &emsp;&emsp;&emsp;&emsp;4.8.3) support colors
+#### &emsp;&emsp;&emsp;&emsp;4.8.4) reduce flickers
 ## 5) Code deployment
 ### &emsp;&emsp;5.1) no test coverage
 ### &emsp;&emsp;5.2) no CI/ CD
