@@ -14,6 +14,7 @@ public class ConfigPOCO
     public bool UseSpeed { get; set; } = false;
     public bool UseAcceleration { get; set; } = false;
     public bool UseLevel { get; set; } = false;
+    public bool UseDashboard { get; set; } = true;
     public Level Level { get; set; } = new();
     public TileSet TileSet { get; set; } = new();
 }

@@ -130,7 +130,7 @@ static class Snake
     static void Render()
     {
         Console.Clear();
-        RendorDashboard();
+        if (Config.UseDashboard) RendorDashboard();
         if (Config.UseBorder) Console.WriteLine(Border);
         for (int x = 0; x <= Arr.GetUpperBound(0); x++)
         {

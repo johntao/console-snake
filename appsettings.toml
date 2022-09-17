@@ -7,6 +7,7 @@ CanSpeedUp = true
 UseSpeed = false
 UseAcceleration = false
 UseLevel = false
+UseDashboard = true
 
 [Level]
 Threshold = 5

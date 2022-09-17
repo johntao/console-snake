@@ -7,7 +7,7 @@ static class Config
     internal readonly static char[] Tiles = new char[Enum.GetValues(typeof(TileType)).Length];
     internal readonly static double[] Levels;
     internal readonly static char Wall;
-    internal readonly static bool CanSpeedUp, CanHitWall, UseBorder, UseSpeed, UseAcceleration, UseLevel;
+    internal readonly static bool CanSpeedUp, CanHitWall, UseBorder, UseSpeed, UseAcceleration, UseLevel, UseDashboard;
     static Config()
     {
         var path = Path.Join(Directory.GetCurrentDirectory(), "appsettings.toml");
@@ -29,6 +29,7 @@ static class Config
         UseBorder = bool.Parse(config[nameof(UseBorder)]);
         UseSpeed = bool.Parse(config[nameof(UseSpeed)]);
         UseLevel = bool.Parse(config[nameof(UseLevel)]);
+        UseDashboard = bool.Parse(config[nameof(UseDashboard)]);
         UseAcceleration = bool.Parse(config[nameof(UseAcceleration)]);
         var set = config.GetSection("TileSet");
         Tiles[(int)TileType.None] = char.Parse(set[nameof(TileType.None)]);
