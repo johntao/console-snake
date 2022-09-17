@@ -2,6 +2,22 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Timers;
 
+class HighScore
+{
+    public int Length;
+    public string Time = "99:99";
+    public void SetHighScore(int len, Stopwatch sw)
+    {
+        sw.Stop();
+        bool isFirstRun = len == 0;
+        if (isFirstRun || len < Length) return;
+        Length = len;
+        var time = sw.Elapsed.ToString("mm\\:ss");
+        if (time.CompareTo(Time) >= 0) return;
+        Time = time;
+    }
+    public override string ToString() => $"{Length}@{Time}";
+}
 static class Snake
 {
     static readonly Random Rand = new Random();
@@ -9,7 +25,9 @@ static class Snake
     static readonly System.Timers.Timer Timer = new System.Timers.Timer(Config.Speed);
     static readonly TileType[,] Arr = new TileType[Config.Bound, Config.Bound];
     static readonly string Border = string.Join(' ', Enumerable.Repeat<char>(Config.Wall, Config.Bound + 2));
-    static int Len, HighScore, Level = Config.DefaultLevel;
+    static int Len, Level = Config.DefaultLevel;
+    static readonly HighScore HighScore = new();
+    static string SpeedDisplay = string.Empty;
     static (int X, int Y) Head, Crate;
     static SpeedDirection Dir;
     static readonly ConcurrentQueue<(int X, int Y)> Steps = new ConcurrentQueue<(int X, int Y)>();
@@ -50,7 +68,8 @@ static class Snake
     }
     static void March(object? sender, EventArgs e)
     {
-        if (!Config.CanMarchByKey && !(e is ElapsedEventArgs)) return;
+        bool isMarchByKey = sender == null;
+        if (isMarchByKey && !Config.CanMarchByKey) return;
         if (Dir == SpeedDirection.None) return;
         if (!Sw.IsRunning) Sw.Restart();
         switch (Dir)
@@ -99,8 +118,12 @@ static class Snake
             && Config.UseLevel
             && (Level + 1) < Config.Levels.Length)
         {
-            var lvl = Config.Levels[++Level];
-            if (Config.CanMarchByTimer && Config.UseAcceleration) Timer.Interval = Config.Speed / lvl;
+            var speedLevel = Config.Levels[++Level];
+            if (Config.CanMarchByTimer && Config.UseAcceleration)
+            {
+                SpeedDisplay = $"{Config.Speed / 1000}x{speedLevel}";
+                Timer.Interval = Config.Speed / speedLevel;
+            }
         }
         Crate = NextCrate(Config.Bound);
         while (Arr[Crate.X, Crate.Y] > 0)
@@ -117,14 +140,15 @@ static class Snake
         Head = default;
         Crate = default;
         Level = Config.DefaultLevel;
+        SpeedDisplay = $"{Config.Speed / 1000}x1";
         Timer.Interval = Config.Speed;
         Steps.Enqueue(Head);
-        if (Len > HighScore) HighScore = Len;
+        HighScore.SetHighScore(Len, Sw);
         Len = Config.StartLen;
         while (Crate == default)
             Crate = NextCrate(Config.Bound);
         Arr[Crate.X, Crate.Y] = TileType.Crate;
-        Sw.Stop();
+
         Render();
     }
     static void Render()
@@ -154,14 +178,15 @@ static class Snake
     }
     static void RendorDashboard()
     {
-        var headers = new List<string> { "Time ", "Score", "HighScore" };
-        if (Config.UseLevel) headers.Insert(1, "Level");
+        //Level, Speed, Length, Time, HighScore
+        var headers = new List<string> { "Speed", "Len", "Time ", "HighScore" };
+        if (Config.UseLevel) headers.Insert(0, "Lvl");
         var headline = $"| {string.Join(" | ", headers)} |";
         var seperate = new string(headline.Select(q => q == '|' ? '|' : '-').ToArray());
 
         var lens = headers.Select(q => q.Length).ToArray();
-        var vals = new List<string> { Sw.Elapsed.ToString("mm\\:ss"), Len + "", HighScore + "" };
-        if (Config.UseLevel) vals.Insert(1, Level + "");
+        var vals = new List<string> { SpeedDisplay, Len + "", Sw.Elapsed.ToString("mm\\:ss"), HighScore + "" };
+        if (Config.UseLevel) vals.Insert(0, Level + "");
         var qq = lens.Zip(vals, (q, w) => w.PadLeft(q));
         var bodyline = $"| {string.Join(" | ", qq)} |";
 
