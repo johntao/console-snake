@@ -141,7 +141,7 @@ class Snake
             bool canMarchByTimer = (_motor.MotorEnum & MotorEnum.ByTimer) > 0;
             if (canMarchByTimer && _motor.UseLevelAccelerator)
             {
-                SpeedDisplay = $"{_motor.StartingSpeed / 1000}x{speedLevel}";
+                SpeedDisplay = GetSpeedDisplay(speedLevel);
                 Timer.Interval = _motor.StartingSpeed / speedLevel;
             }
         }
@@ -150,6 +150,9 @@ class Snake
             Crate = NextCrate(_map.SideLength);
         TheMap[Crate.X, Crate.Y] = TileType.Crate;
     }
+
+    private string GetSpeedDisplay(double speedLevel) => $"{1 / ((double)_motor.StartingSpeed / 1000):0.#}x{speedLevel}";
+
     static (int X, int Y) NextCrate(int max) => (Rand.Next(max), Rand.Next(max));
     void Reset()
     {
@@ -160,7 +163,7 @@ class Snake
         Head = default;
         Crate = default;
         Level = _lvl.DefaultLevel;
-        SpeedDisplay = $"{_motor.StartingSpeed / 1000}x1";
+        SpeedDisplay = GetSpeedDisplay(1);
         Timer.Interval = _motor.StartingSpeed;
         Steps.Enqueue(Head);
         _hs.SetHighScore(ref CurrentLength, Sw);
