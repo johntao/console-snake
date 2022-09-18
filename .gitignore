@@ -1,2 +1,3 @@
 .vscode
 *.exclude
+appsettings.toml

@@ -25,7 +25,7 @@ public class Gameplay
 }
 public class GameplayMotor
 {
-    public byte MotorType { get; set; } = (byte)MotorEnum.ByKey;
+    public byte MotorType { get; set; } = (byte)MotorEnum.ByTimerAndKey;
     public MotorEnum MotorEnum;
     public int StartingSpeed { get; set; } = 1000;
     public bool UseLevelAccelerator { get; set; } = false;
@@ -43,7 +43,7 @@ public class Visual
 }
 public class VisualMap
 {
-    public int SideLength { get; set; } = 3;
+    public int SideLength { get; set; } = 10;
     public string None { get; set; } = "·";
     public string Body { get; set; } = "○";
     public string Head { get; set; } = "●";

@@ -30,9 +30,9 @@ class Snake
     static SpeedDirection Dir;
     static readonly ConcurrentQueue<(int X, int Y)> Steps = new ConcurrentQueue<(int X, int Y)>();
     readonly System.Timers.Timer Timer;
-    readonly TileType[,] Arr;
+    readonly TileType[,] TheMap;
     readonly string Border;
-    int Len, Level;
+    int CurrentLength, Level;
     readonly Gameplay _opt;
     readonly GameplayLevel _lvl;
     readonly GameplayMotor _motor;
@@ -44,7 +44,7 @@ class Snake
         (_opt, _lvl, _motor, _visual, _map) = q;
         Level = _lvl.DefaultLevel;
         Timer = new System.Timers.Timer(_motor.StartingSpeed);
-        Arr = new TileType[_map.SideLength, _map.SideLength];
+        TheMap = new TileType[_map.SideLength, _map.SideLength];
         Border = string.Join(' ', Enumerable.Repeat<string>(_map.Wall, _map.SideLength + 2));
     }
     internal void Start()
@@ -79,22 +79,22 @@ class Snake
         if (isMarchByKey && !canMarchByKey) return;
         if (Dir == SpeedDirection.None) return;
         if (!Sw.IsRunning) Sw.Restart();
-        Arr[Head.X, Head.Y] = TileType.Body;
+        TheMap[Head.X, Head.Y] = TileType.Body;
         Func<SpeedDirection, TileType[,], (int X, int Y)> marchForward = _opt.CanPassWall ? CanPassWall : CanNotPassWall;
-        try { (Head.X, Head.Y) = marchForward(Dir, Arr); }
+        try { (Head.X, Head.Y) = marchForward(Dir, TheMap); }
         catch (ExceedBorder) { Reset(); return; }
         if (Head == Crate)
         {
-            if (Steps.Count == Arr.Length - 1) { ++Len; Reset(); return; } // Win condition
+            if (Steps.Count == TheMap.Length - 1) { ++CurrentLength; Reset(); return; } // Win condition
             NextCrate();
         }
-        if (Arr[Head.X, Head.Y] == TileType.Body) { Reset(); return; } // Loss condition
+        if (TheMap[Head.X, Head.Y] == TileType.Body) { Reset(); return; } // Loss condition
         Steps.Enqueue(Head);
-        Arr[Head.X, Head.Y] = TileType.Head;
-        if (Steps.Count > Len)
+        TheMap[Head.X, Head.Y] = TileType.Head;
+        if (Steps.Count > CurrentLength)
         {
             var isOut = Steps.TryDequeue(out var step);
-            if (isOut) Arr[step.X, step.Y] = TileType.None;
+            if (isOut) TheMap[step.X, step.Y] = TileType.None;
         }
         Render();
         static (int X, int Y) CanNotPassWall(SpeedDirection dir, TileType[,] arr) => dir switch
@@ -116,7 +116,7 @@ class Snake
     }
     void NextCrate()
     {
-        if ((++Len % _lvl.Threshold) == 0
+        if ((++CurrentLength % _lvl.Threshold) == 0
             && _opt.UseLevel
             && (Level + 1) < _lvl.Levels.Count)
         {
@@ -129,28 +129,28 @@ class Snake
             }
         }
         Crate = NextCrate(_map.SideLength);
-        while (Arr[Crate.X, Crate.Y] > 0)
+        while (TheMap[Crate.X, Crate.Y] > 0)
             Crate = NextCrate(_map.SideLength);
-        Arr[Crate.X, Crate.Y] = TileType.Crate;
+        TheMap[Crate.X, Crate.Y] = TileType.Crate;
     }
     static (int X, int Y) NextCrate(int max) => (Rand.Next(max), Rand.Next(max));
     void Reset()
     {
-        Array.Clear(Arr, 0, Arr.Length);
+        Array.Clear(TheMap, 0, TheMap.Length);
         Steps.Clear();
         Dir = SpeedDirection.None;
-        Arr[0, 0] = TileType.Head;
+        TheMap[0, 0] = TileType.Head;
         Head = default;
         Crate = default;
         Level = _lvl.DefaultLevel;
         SpeedDisplay = $"{_motor.StartingSpeed / 1000}x1";
         Timer.Interval = _motor.StartingSpeed;
         Steps.Enqueue(Head);
-        HighScore.SetHighScore(Len, Sw);
-        Len = _opt.StartingLength;
+        HighScore.SetHighScore(CurrentLength, Sw);
+        CurrentLength = _opt.StartingLength;
         while (Crate == default)
             Crate = NextCrate(_map.SideLength);
-        Arr[Crate.X, Crate.Y] = TileType.Crate;
+        TheMap[Crate.X, Crate.Y] = TileType.Crate;
         Render();
     }
     void Render()
@@ -158,12 +158,12 @@ class Snake
         Console.Clear();
         if (_visual.UseDashboard) RendorDashboard();
         if (_visual.UseBorder) Console.WriteLine(Border);
-        for (int x = 0; x <= Arr.GetUpperBound(0); x++)
+        for (int x = 0; x <= TheMap.GetUpperBound(0); x++)
         {
             if (_visual.UseBorder) Console.Write(_map.Wall + " ");
-            for (int y = 0; y <= Arr.GetUpperBound(1); y++)
+            for (int y = 0; y <= TheMap.GetUpperBound(1); y++)
             {
-                Console.Write(Arr[y, x] switch
+                Console.Write(TheMap[y, x] switch
                 {
                     TileType.Crate => _map.Crate,
                     TileType.Head => _map.Head,
@@ -187,7 +187,7 @@ class Snake
         var seperate = new string(headline.Select(q => q == '|' ? '|' : '-').ToArray());
 
         var lens = headers.Select(q => q.Length).ToArray();
-        var vals = new List<string> { SpeedDisplay, Len + "", Sw.Elapsed.ToString("mm\\:ss"), HighScore + "" };
+        var vals = new List<string> { SpeedDisplay, CurrentLength + "", Sw.Elapsed.ToString("mm\\:ss"), HighScore + "" };
         if (_opt.UseLevel) vals.Insert(0, Level + "");
         var qq = lens.Zip(vals, (q, w) => w.PadLeft(q));
         var bodyline = $"| {string.Join(" | ", qq)} |";
