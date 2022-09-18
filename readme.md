@@ -2,6 +2,8 @@
 - A text-based minimal snake game
 - I'm trying **NOT** to find out if someone has already done it
 
+![a text-based minimal snake game](./demo.gif)
+
 # Design proposal
 ## 1) A config file to control the game parameters as many as possible
 ### &emsp;&emsp;1.1) The config file should be auto-generated if not exist
