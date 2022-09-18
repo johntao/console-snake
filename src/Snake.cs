@@ -12,13 +12,25 @@ class HighScore
     public void SetHighScore(ref int CurrentLength, Stopwatch sw)
     {
         sw.Stop();
-        bool isFirstRun = CurrentLength == 0;
-        if (isFirstRun || CurrentLength < MaxLength) return;
-        MaxLength = CurrentLength;
         var time = sw.Elapsed.ToString("mm\\:ss");
-        if (time.CompareTo(MinTime) >= 0) return;
-        MinTime = time;
-        CurrentLength = _startLength;
+        sw.Reset();
+        bool isFirstRun = CurrentLength == 0;
+        if (isFirstRun || CurrentLength < MaxLength)
+        {
+            CurrentLength = _startLength;
+        }
+        else if (CurrentLength == MaxLength)
+        {
+            CurrentLength = _startLength;
+            if (time.CompareTo(MinTime) < 0)
+                MinTime = time;
+        }
+        else if (CurrentLength > MaxLength)
+        {
+            MaxLength = CurrentLength;
+            CurrentLength = _startLength;
+            MinTime = time;
+        }
     }
     public override string ToString() => $"{MaxLength}@{MinTime}";
 }
