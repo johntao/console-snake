@@ -19,6 +19,7 @@ using IHost host = Host.CreateDefaultBuilder(args)
     })
     .ConfigureServices((q, s) => s
         .AddSingleton<Snake>()
+        .AddSingleton<HighScore>()
         .Configure<Config>(q.Configuration)
         .Configure<Config>(q => q.GameplayMotor.MotorEnum = (MotorEnum)q.GameplayMotor.MotorType)
         )

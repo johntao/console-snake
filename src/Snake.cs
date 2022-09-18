@@ -5,26 +5,28 @@ using Microsoft.Extensions.Options;
 
 class HighScore
 {
-    public int Length;
-    public string Time = "99:99";
-    public void SetHighScore(int len, Stopwatch sw)
+    public int MaxLength;
+    public string MinTime = "99:99";
+    readonly int _startLength;
+    public HighScore(IOptions<Config> cfg) => _startLength = cfg.Value.Gameplay.StartingLength;
+    public void SetHighScore(ref int CurrentLength, Stopwatch sw)
     {
         sw.Stop();
-        bool isFirstRun = len == 0;
-        if (isFirstRun || len < Length) return;
-        Length = len;
+        bool isFirstRun = CurrentLength == 0;
+        if (isFirstRun || CurrentLength < MaxLength) return;
+        MaxLength = CurrentLength;
         var time = sw.Elapsed.ToString("mm\\:ss");
-        if (time.CompareTo(Time) >= 0) return;
-        Time = time;
+        if (time.CompareTo(MinTime) >= 0) return;
+        MinTime = time;
+        CurrentLength = _startLength;
     }
-    public override string ToString() => $"{Length}@{Time}";
+    public override string ToString() => $"{MaxLength}@{MinTime}";
 }
 class ExceedBorder : Exception { }
 class Snake
 {
     static readonly Random Rand = new Random();
     static readonly Stopwatch Sw = new Stopwatch();
-    static readonly HighScore HighScore = new();
     static string SpeedDisplay = string.Empty;
     static (int X, int Y) Head, Crate;
     static SpeedDirection Dir;
@@ -38,8 +40,10 @@ class Snake
     readonly GameplayMotor _motor;
     readonly Visual _visual;
     readonly VisualMap _map;
-    public Snake(IOptions<Config> cfg)
+    readonly HighScore _hs;
+    public Snake(IOptions<Config> cfg, HighScore hs)
     {
+        _hs = hs;
         var q = cfg.Value;
         (_opt, _lvl, _motor, _visual, _map) = q;
         Level = _lvl.DefaultLevel;
@@ -85,7 +89,8 @@ class Snake
         catch (ExceedBorder) { Reset(); return; }
         if (Head == Crate)
         {
-            if (Steps.Count == TheMap.Length - 1) { ++CurrentLength; Reset(); return; } // Win condition
+            ++CurrentLength;
+            if (Steps.Count == TheMap.Length - 1) { Reset(); return; } // Win condition
             NextCrate();
         }
         if (TheMap[Head.X, Head.Y] == TileType.Body) { Reset(); return; } // Loss condition
@@ -116,8 +121,8 @@ class Snake
     }
     void NextCrate()
     {
-        if ((++CurrentLength % _lvl.Threshold) == 0
-            && _opt.UseLevel
+        if (_opt.UseLevel
+            && (CurrentLength % _lvl.Threshold) == 0
             && (Level + 1) < _lvl.Levels.Count)
         {
             var speedLevel = _lvl.Levels[++Level];
@@ -146,8 +151,7 @@ class Snake
         SpeedDisplay = $"{_motor.StartingSpeed / 1000}x1";
         Timer.Interval = _motor.StartingSpeed;
         Steps.Enqueue(Head);
-        HighScore.SetHighScore(CurrentLength, Sw);
-        CurrentLength = _opt.StartingLength;
+        _hs.SetHighScore(ref CurrentLength, Sw);
         while (Crate == default)
             Crate = NextCrate(_map.SideLength);
         TheMap[Crate.X, Crate.Y] = TileType.Crate;
@@ -187,7 +191,7 @@ class Snake
         var seperate = new string(headline.Select(q => q == '|' ? '|' : '-').ToArray());
 
         var lens = headers.Select(q => q.Length).ToArray();
-        var vals = new List<string> { SpeedDisplay, CurrentLength + "", Sw.Elapsed.ToString("mm\\:ss"), HighScore + "" };
+        var vals = new List<string> { SpeedDisplay, CurrentLength + "", Sw.Elapsed.ToString("mm\\:ss"), _hs + "" };
         if (_opt.UseLevel) vals.Insert(0, Level + "");
         var qq = lens.Zip(vals, (q, w) => w.PadLeft(q));
         var bodyline = $"| {string.Join(" | ", qq)} |";
