@@ -34,7 +34,88 @@ class HighScore
     }
     public override string ToString() => $"{MaxLength}@{MinTime}";
 }
-class ExceedBorder : Exception { }
+interface IMap
+{
+    //__|y_____
+    // x| → →
+    // ↓|
+    // ↓|
+    public int TopBound { get; } // zero-based
+    public int BottomBound { get; } // zero-based
+    public int LeftBound { get; } // zero-based
+    public int RightBound { get; } // zero-based
+    public int Length { get; }
+    public TileType this[int x, int y] { get; set; }
+    public TileType this[(int x, int y) point] { get; set; }
+    public void Clear();
+}
+class Map2dArray : IMap
+{
+    private readonly TileType[,] _map;
+    public int TopBound { get; } // zero-based
+    public int BottomBound { get; } // zero-based
+    public int LeftBound { get; } // zero-based
+    public int RightBound { get; } // zero-based
+    public int Length { get; }
+    public Map2dArray(int height, int width)
+    {
+        _map = new TileType[height, width];
+        TopBound = 0;
+        BottomBound = height - 1;
+        LeftBound = 0;
+        RightBound = width - 1;
+        Length = height * width - 1;
+    }
+    public TileType this[int x, int y]
+    {
+        get => _map[x, y];
+        set => _map[x, y] = value;
+    }
+    public TileType this[(int x, int y) point]
+    {
+        get => _map[point.x, point.y];
+        set => _map[point.x, point.y] = value;
+    }
+    public void Clear()
+    {
+        Array.Clear(_map, 0, _map.Length);
+    }
+}
+class MapJaggedArray
+{
+    private readonly TileType[][] _map;
+    public int TopBound { get; } // zero-based
+    public int BottomBound { get; } // zero-based
+    public int LeftBound { get; } // zero-based
+    public int RightBound { get; } // zero-based
+    public int Length { get; }
+    public MapJaggedArray(int height, int width)
+    {
+        _map = new TileType[height][];
+        for (int i = 0; i < width; i++)
+            _map[i] = new TileType[width];
+        TopBound = 0;
+        BottomBound = height - 1;
+        LeftBound = 0;
+        RightBound = width - 1;
+        Length = height * width - 1;
+    }
+    public TileType this[int x, int y]
+    {
+        get => _map[x][y];
+        set => _map[x][y] = value;
+    }
+    public TileType this[(int x, int y) point]
+    {
+        get => _map[point.x][point.y];
+        set => _map[point.x][point.y] = value;
+    }
+    public void Clear()
+    {
+        foreach (var item in _map)
+            Array.Clear(item, 0, item.Length);
+    }
+}
 class Snake
 {
     static readonly Random Rand = new Random();
@@ -44,24 +125,24 @@ class Snake
     static SpeedDirection Dir;
     static readonly ConcurrentQueue<(int X, int Y)> Steps = new ConcurrentQueue<(int X, int Y)>();
     readonly System.Timers.Timer Timer;
-    readonly TileType[,] TheMap;
+    readonly IMap TheMap;
     readonly string Border;
     int CurrentLength, Level;
     readonly Gameplay _opt;
     readonly GameplayLevel _lvl;
     readonly GameplayMotor _motor;
     readonly Visual _visual;
-    readonly VisualMap _map;
+    readonly VisualMap _mapOpts;
     readonly HighScore _hs;
     public Snake(IOptions<Config> cfg, HighScore hs)
     {
         _hs = hs;
         var q = cfg.Value;
-        (_opt, _lvl, _motor, _visual, _map) = q;
+        (_opt, _lvl, _motor, _visual, _mapOpts) = q;
         Level = _lvl.DefaultLevel;
         Timer = new System.Timers.Timer(_motor.StartingSpeed);
-        TheMap = new TileType[_map.SideLength, _map.SideLength];
-        Border = string.Join(' ', Enumerable.Repeat<string>(_map.Wall, _map.SideLength + 2));
+        TheMap = new Map2dArray(_mapOpts.SideLength, _mapOpts.SideLength);
+        Border = string.Join(' ', Enumerable.Repeat<string>(_mapOpts.Wall, _mapOpts.SideLength + 2));
     }
     internal void Start()
     {
@@ -95,40 +176,31 @@ class Snake
         if (isMarchByKey && !canMarchByKey) return;
         if (Dir == SpeedDirection.None) return;
         if (!Sw.IsRunning) Sw.Restart();
-        TheMap[Head.X, Head.Y] = TileType.Body;
-        Func<SpeedDirection, TileType[,], (int X, int Y)> marchForward = _opt.CanPassWall ? CanPassWall : CanNotPassWall;
-        try { (Head.X, Head.Y) = marchForward(Dir, TheMap); }
-        catch (ExceedBorder) { Reset(); return; }
+        TheMap[Head] = TileType.Body;
+        (Head.X, Head.Y, var isHit) = CanPassWall(Dir, TheMap);
+        if (isHit && !_opt.CanPassWall) { Reset(); return; }
         if (Head == Crate)
         {
             ++CurrentLength;
             if (Steps.Count == TheMap.Length - 1) { Reset(); return; } // Win condition
             NextCrate();
         }
-        if (TheMap[Head.X, Head.Y] == TileType.Body) { Reset(); return; } // Loss condition
+        if (TheMap[Head] == TileType.Body) { Reset(); return; } // Loss condition
         Steps.Enqueue(Head);
-        TheMap[Head.X, Head.Y] = TileType.Head;
+        TheMap[Head] = TileType.Head;
         if (Steps.Count > CurrentLength)
         {
             var isOut = Steps.TryDequeue(out var step);
-            if (isOut) TheMap[step.X, step.Y] = TileType.None;
+            if (isOut) TheMap[step] = TileType.None;
         }
         Render();
-        static (int X, int Y) CanNotPassWall(SpeedDirection dir, TileType[,] arr) => dir switch
+        static (int x, int y, bool isHit) CanPassWall(SpeedDirection dir, IMap map) => dir switch
         {
-            SpeedDirection.Up when Head.Y-- == arr.GetLowerBound(1) => throw new ExceedBorder(),
-            SpeedDirection.Down when Head.Y++ == arr.GetUpperBound(1) => throw new ExceedBorder(),
-            SpeedDirection.Left when Head.X-- == arr.GetLowerBound(0) => throw new ExceedBorder(),
-            SpeedDirection.Right when Head.X++ == arr.GetUpperBound(0) => throw new ExceedBorder(),
-            _ => Head
-        };
-        static (int X, int Y) CanPassWall(SpeedDirection dir, TileType[,] arr) => dir switch
-        {
-            SpeedDirection.Up when --Head.Y < arr.GetLowerBound(1) => (Head.X, arr.GetUpperBound(1)),
-            SpeedDirection.Down when ++Head.Y > arr.GetUpperBound(1) => (Head.X, arr.GetLowerBound(1)),
-            SpeedDirection.Left when --Head.X < arr.GetLowerBound(0) => (arr.GetUpperBound(0), Head.Y),
-            SpeedDirection.Right when ++Head.X > arr.GetUpperBound(0) => (arr.GetLowerBound(0), Head.Y),
-            _ => Head
+            SpeedDirection.Up when Head.Y-- == map.LeftBound => (Head.X, map.RightBound, true),
+            SpeedDirection.Down when Head.Y++ == map.RightBound => (Head.X, map.LeftBound, true),
+            SpeedDirection.Left when Head.X-- == map.TopBound => (map.BottomBound, Head.Y, true),
+            SpeedDirection.Right when Head.X++ == map.BottomBound => (map.TopBound, Head.Y, true),
+            _ => (Head.X, Head.Y, false)
         };
     }
     void NextCrate()
@@ -145,10 +217,10 @@ class Snake
                 Timer.Interval = _motor.StartingSpeed / speedLevel;
             }
         }
-        Crate = NextCrate(_map.SideLength);
-        while (TheMap[Crate.X, Crate.Y] > 0)
-            Crate = NextCrate(_map.SideLength);
-        TheMap[Crate.X, Crate.Y] = TileType.Crate;
+        Crate = NextCrate(_mapOpts.SideLength);
+        while (TheMap[Crate] > 0)
+            Crate = NextCrate(_mapOpts.SideLength);
+        TheMap[Crate] = TileType.Crate;
     }
 
     private string GetSpeedDisplay(double speedLevel) => $"{1 / ((double)_motor.StartingSpeed / 1000):0.#}x{speedLevel}";
@@ -156,7 +228,7 @@ class Snake
     static (int X, int Y) NextCrate(int max) => (Rand.Next(max), Rand.Next(max));
     void Reset()
     {
-        Array.Clear(TheMap, 0, TheMap.Length);
+        TheMap.Clear();
         Steps.Clear();
         Dir = SpeedDirection.None;
         TheMap[0, 0] = TileType.Head;
@@ -168,7 +240,7 @@ class Snake
         Steps.Enqueue(Head);
         _hs.SetHighScore(ref CurrentLength, Sw);
         while (Crate == default)
-            Crate = NextCrate(_map.SideLength);
+            Crate = NextCrate(_mapOpts.SideLength);
         TheMap[Crate.X, Crate.Y] = TileType.Crate;
         Render();
     }
@@ -177,21 +249,21 @@ class Snake
         Console.Clear();
         if (_visual.UseDashboard) RendorDashboard();
         if (_visual.UseBorder) Console.WriteLine(Border);
-        for (int x = 0; x <= TheMap.GetUpperBound(0); x++)
+        for (int x = 0; x <= TheMap.BottomBound; x++)
         {
-            if (_visual.UseBorder) Console.Write(_map.Wall + " ");
-            for (int y = 0; y <= TheMap.GetUpperBound(1); y++)
+            if (_visual.UseBorder) Console.Write(_mapOpts.Wall + " ");
+            for (int y = 0; y <= TheMap.RightBound; y++)
             {
                 Console.Write(TheMap[y, x] switch
                 {
-                    TileType.Crate => _map.Crate,
-                    TileType.Head => _map.Head,
-                    TileType.Body => _map.Body,
-                    _ => _map.None
+                    TileType.Crate => _mapOpts.Crate,
+                    TileType.Head => _mapOpts.Head,
+                    TileType.Body => _mapOpts.Body,
+                    _ => _mapOpts.None
                 });
                 Console.Write(' ');
             }
-            if (_visual.UseBorder) Console.Write(_map.Wall);
+            if (_visual.UseBorder) Console.Write(_mapOpts.Wall);
             Console.WriteLine();
         }
         if (_visual.UseBorder) Console.WriteLine(Border);
