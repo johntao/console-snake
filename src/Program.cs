@@ -1,9 +1,8 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Tomlyn.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Tomlyn;
-
 using IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration(q =>
     {
@@ -20,6 +19,9 @@ using IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((q, s) => s
         .AddSingleton<Snake>()
         .AddSingleton<HighScore>()
+        .AddSingleton<Renderer>()
+        .AddSingleton<Dashboard>()
+        .AddSingleton<IMap, MapJaggedArray>()
         .Configure<Config>(q.Configuration)
         .Configure<Config>(q => q.GameplayMotor.MotorEnum = (MotorEnum)q.GameplayMotor.MotorType)
         )
