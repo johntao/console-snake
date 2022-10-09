@@ -10,7 +10,7 @@ class Dashboard
         set
         {
             _speedDisplay = value;
-            _rdr.UpdatePoint(2 + _yOffset, (value + "").PadLeft(5));
+            _rdr.RendorDashboardPartial(2 + _yOffset, (value + "").PadLeft(5));
         }
     }
     //| Lvl | Speed | Len | Time | HighScore |
@@ -22,7 +22,7 @@ class Dashboard
         set
         {
             _currentLength = value;
-            _rdr.UpdatePoint(10 + _yOffset, (value + "").PadLeft(3));
+            _rdr.RendorDashboardPartial(10 + _yOffset, (value + "").PadLeft(3));
         }
     }
     private int _level;
@@ -32,7 +32,7 @@ class Dashboard
         set
         {
             _level = value;
-            if (_opt.UseLevel) _rdr.UpdatePoint(2, (value + "").PadLeft(3));
+            if (_opt.UseLevel) _rdr.RendorDashboardPartial(2, (value + "").PadLeft(3));
         }
     }
     public Stopwatch Sw { get; }

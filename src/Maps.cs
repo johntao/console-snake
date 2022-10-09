@@ -45,7 +45,7 @@ class Map2dArray : IMap
         set
         {
             _map[x, y] = value;
-            Renderer.UpdatePoint(x, y, value);
+            Renderer.RendorMapPartial(x, y, value);
         }
     }
     public ReadOnlySpan<TileType> this[int x]
@@ -66,7 +66,7 @@ class Map2dArray : IMap
         set
         {
             _map[point.x, point.y] = value;
-            Renderer.UpdatePoint(point.x, point.y, value);
+            Renderer.RendorMapPartial(point.x, point.y, value);
         }
     }
     public void Clear()
@@ -104,7 +104,7 @@ class MapJaggedArray : IMap
         set
         {
             _map[x][y] = value;
-            Renderer.UpdatePoint(x, y, value);
+            Renderer.RendorMapPartial(x, y, value);
         }
     }
     public ReadOnlySpan<TileType> this[int x] => _map.AsSpan(x)[0];
@@ -114,7 +114,7 @@ class MapJaggedArray : IMap
         set
         {
             _map[point.x][point.y] = value;
-            Renderer.UpdatePoint(point.x, point.y, value);
+            Renderer.RendorMapPartial(point.x, point.y, value);
         }
     }
     public void Clear()

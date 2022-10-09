@@ -26,7 +26,7 @@ class Renderer
         // Console.Write(args.Character);
         // };
     }
-    public void UpdatePoint(int x, int y, TileType value)
+    public void RendorMapPartial(int x, int y, TileType value)
     {
         Console.SetCursorPosition(y * 2, x + _xOffset);
         Console.Write(TileToString(value));
@@ -40,7 +40,7 @@ class Renderer
         _ => _mapOpts.None
     };
 
-    public void CleanMap(IMap map, HighScore _hs, Dashboard _db)
+    public void ClearAll(IMap map, HighScore _hs, Dashboard _db)
     {
         Console.Clear();
         if (_visual.UseDashboard) RendorDashboard(_hs, _db);
@@ -71,7 +71,7 @@ class Renderer
         Console.WriteLine(bodyline);
         Console.WriteLine();
     }
-    public void UpdatePoint(int y, string value)
+    public void RendorDashboardPartial(int y, string value)
     {
         Console.SetCursorPosition(y, 2);
         Console.Write(value);

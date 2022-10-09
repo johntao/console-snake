@@ -134,7 +134,7 @@ class Snake
         while (Crate == default)
             Crate = NextCrate(_mapOpts.SideLength);
         TheMap[Crate] = TileType.Crate;
-        _rdr.CleanMap(TheMap, _hs, _db);
+        _rdr.ClearAll(TheMap, _hs, _db);
     }
     // void RenderAll()
     // {
