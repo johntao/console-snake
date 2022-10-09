@@ -18,20 +18,21 @@ interface IMap
     public ReadOnlySpan<TileType> this[int x] { get; }
     public void Clear();
 }
-class Map2dArray : IMap
+abstract class MapBase : IMap
 {
-    private readonly TileType[,] _map;
+    public abstract TileType this[(int x, int y) point] { get; set; }
+    public abstract ReadOnlySpan<TileType> this[int x] { get; }
+    public abstract TileType this[int x, int y] { get; set; }
     public int TopBound { get; } // zero-based
     public int BottomBound { get; } // zero-based
     public int LeftBound { get; } // zero-based
     public int RightBound { get; } // zero-based
     public int Length { get; }
-    public bool IsStart { get; set; }
     public Renderer Renderer { get; }
-    public Map2dArray(IOptions<Config> cfg, Renderer renderer)
+    public abstract void Clear();
+    protected MapBase(IOptions<Config> cfg, Renderer renderer)
     {
         var opt = cfg.Value.VisualMap;
-        _map = new TileType[opt.SideLength, opt.SideLength];
         TopBound = 0;
         BottomBound = opt.SideLength - 1;
         LeftBound = 0;
@@ -39,7 +40,16 @@ class Map2dArray : IMap
         Length = opt.SideLength * opt.SideLength - 1;
         Renderer = renderer;
     }
-    public TileType this[int x, int y]
+}
+class Map2dArray : MapBase
+{
+    private readonly TileType[,] _map;
+    public Map2dArray(IOptions<Config> cfg, Renderer renderer) : base(cfg, renderer)
+    {
+        var opt = cfg.Value.VisualMap;
+        _map = new TileType[opt.SideLength, opt.SideLength];
+    }
+    public override TileType this[int x, int y]
     {
         get => _map[x, y];
         set
@@ -48,7 +58,7 @@ class Map2dArray : IMap
             Renderer.RendorMapPartial(x, y, value);
         }
     }
-    public ReadOnlySpan<TileType> this[int x]
+    public override ReadOnlySpan<TileType> this[int x]
     {
         get
         {
@@ -56,11 +66,10 @@ class Map2dArray : IMap
             // 3 4 5 | 1*3
             // 6 7 8 | 2*3
             var width = RightBound + 1;
-            var rtn = _map.AsSpan()[(x * width)..width];
-            return rtn;
+            return _map.AsSpan().Slice((x * width), width);
         }
     }
-    public TileType this[(int x, int y) point]
+    public override TileType this[(int x, int y) point]
     {
         get => _map[point.x, point.y];
         set
@@ -69,36 +78,20 @@ class Map2dArray : IMap
             Renderer.RendorMapPartial(point.x, point.y, value);
         }
     }
-    public void Clear()
-    {
-        Array.Clear(_map, 0, _map.Length);
-    }
+    public override void Clear() => Array.Clear(_map, 0, _map.Length);
 }
 
-class MapJaggedArray : IMap
+class MapJaggedArray : MapBase
 {
-    public bool IsStart { get; set; }
     private readonly TileType[][] _map;
-    public int TopBound { get; } // zero-based
-    public int BottomBound { get; } // zero-based
-    public int LeftBound { get; } // zero-based
-    public int RightBound { get; } // zero-based
-    public int Length { get; }
-    public Renderer Renderer { get; }
-    public MapJaggedArray(IOptions<Config> cfg, Renderer renderer)
+    public MapJaggedArray(IOptions<Config> cfg, Renderer renderer) : base(cfg, renderer)
     {
         var opt = cfg.Value.VisualMap;
         _map = new TileType[opt.SideLength][];
         for (int i = 0; i < opt.SideLength; i++)
             _map[i] = new TileType[opt.SideLength];
-        TopBound = 0;
-        BottomBound = opt.SideLength - 1;
-        LeftBound = 0;
-        RightBound = opt.SideLength - 1;
-        Length = opt.SideLength * opt.SideLength - 1;
-        Renderer = renderer;
     }
-    public TileType this[int x, int y]
+    public override TileType this[int x, int y]
     {
         get => _map[x][y];
         set
@@ -107,8 +100,8 @@ class MapJaggedArray : IMap
             Renderer.RendorMapPartial(x, y, value);
         }
     }
-    public ReadOnlySpan<TileType> this[int x] => _map.AsSpan(x)[0];
-    public TileType this[(int x, int y) point]
+    public override ReadOnlySpan<TileType> this[int x] => _map.AsSpan(x)[0];
+    public override TileType this[(int x, int y) point]
     {
         get => _map[point.x][point.y];
         set
@@ -117,7 +110,7 @@ class MapJaggedArray : IMap
             Renderer.RendorMapPartial(point.x, point.y, value);
         }
     }
-    public void Clear()
+    public override void Clear()
     {
         foreach (var item in _map)
             Array.Clear(item, 0, item.Length);

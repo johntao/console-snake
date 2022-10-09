@@ -5,16 +5,14 @@ class HighScore
     public int MaxLength;
     public string MinTime = "99:99";
     readonly int _startLength;
-    readonly Dashboard _db;
     readonly Gameplay _opt;
     readonly Renderer _rdr;
     readonly int _yOffset;
-    public HighScore(IOptions<Config> cfg, Dashboard db, Renderer rdr)
+    public HighScore(IOptions<Config> cfg, Renderer rdr)
     {
         _rdr = rdr;
         (_opt, _, _, _, _) = cfg.Value;
         if (_opt.UseLevel) _yOffset = 7;
-        _db = db;
         _startLength = cfg.Value.Gameplay.StartingLength;
     }
     //| Lvl | Speed | Len | Time | HighScore |
@@ -28,26 +26,26 @@ class HighScore
             if (_opt.UseLevel) _rdr.RendorDashboardPartial(23 + _yOffset, (value + "").PadLeft(9));
         }
     }
-    public void SetHighScore()
+    public void SetHighScore(Dashboard board)
     {
-        _db.Sw.Stop();
-        var time = _db.Sw.Elapsed.ToString("mm\\:ss");
-        _db.Sw.Reset();
-        bool isFirstRun = _db.CurrentLength == 0;
-        if (isFirstRun || _db.CurrentLength < MaxLength)
+        board.Sw.Stop();
+        var time = board.Sw.Elapsed.ToString("mm\\:ss");
+        board.Sw.Reset();
+        bool isFirstRun = board.CurrentLength == 0;
+        if (isFirstRun || board.CurrentLength < MaxLength)
         {
-            _db.CurrentLength = _startLength;
+            board.CurrentLength = _startLength;
         }
-        else if (_db.CurrentLength == MaxLength)
+        else if (board.CurrentLength == MaxLength)
         {
-            _db.CurrentLength = _startLength;
+            board.CurrentLength = _startLength;
             if (time.CompareTo(MinTime) < 0)
                 MinTime = time;
         }
-        else if (_db.CurrentLength > MaxLength)
+        else if (board.CurrentLength > MaxLength)
         {
-            MaxLength = _db.CurrentLength;
-            _db.CurrentLength = _startLength;
+            MaxLength = board.CurrentLength;
+            board.CurrentLength = _startLength;
             MinTime = time;
         }
         HighScoreText = $"{MaxLength}@{MinTime}";

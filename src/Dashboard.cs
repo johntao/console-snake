@@ -41,8 +41,11 @@ class Dashboard
     readonly Gameplay _opt;
     readonly Renderer _rdr;
     readonly int _yOffset;
-    public Dashboard(IOptions<Config> cfg, Renderer rdr)
+    readonly HighScore _hs;
+    // readonly Visual _visual;
+    public Dashboard(IOptions<Config> cfg, Renderer rdr, HighScore hs)
     {
+        _hs = hs;
         _rdr = rdr;
         Sw = new Stopwatch();
         (_opt, _lvl, _motor, _, _) = cfg.Value;
@@ -50,14 +53,33 @@ class Dashboard
         Level = _lvl.DefaultLevel;
     }
 
-    internal void Reset()
+    internal void ResetAndReRenderAll(IMap map)
     {
+        _hs.SetHighScore(this);
         Level = _lvl.DefaultLevel;
         SetSpeedDisplay(1);
+        _rdr.ClearAll(map, _hs, this);
     }
 
     internal void SetSpeedDisplay(double speedLevel)
     {
         SpeedDisplay = $"{1 / ((double)_motor.StartingSpeed / 1000):0.#}x{speedLevel}";
+    }
+
+    internal void LevelUp(System.Timers.Timer timer)
+    {
+        if (!_opt.UseLevel) return;
+        if (!HasHitThreshold() || !HasHitLevelCap())
+            return;
+        var speedLevel = _lvl.Levels[++Level];
+        bool canMarchByTimer = (_motor.MotorEnum & MotorEnum.ByTimer) > 0;
+        if (canMarchByTimer && _motor.UseLevelAccelerator)
+        {
+            SetSpeedDisplay(speedLevel);
+            timer.Interval = _motor.StartingSpeed / speedLevel;
+        }
+
+        bool HasHitThreshold() => (CurrentLength % _lvl.Threshold) == 0;
+        bool HasHitLevelCap() => (Level + 1) < _lvl.Levels.Count;
     }
 }

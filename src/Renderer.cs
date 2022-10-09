@@ -8,23 +8,21 @@ class Renderer
     //     internal TileType TileType { get; set; }
     // }
     // public event EventHandler? Render;
+    // Render += (sender, args) =>
+    // {
+    // (int x, int y) = args.Position;
+    // Console.SetCursorPosition(y, x);
+    // Console.Write(args.Character);
+    // };
     readonly VisualMap _mapOpts;
     readonly Visual _visual;
     readonly Gameplay _opt;
-    // readonly HighScore _hs;
     readonly int _xOffset;
-    // readonly Dashboard _db;
-    public Renderer(IOptions<Config> cfg) //, Dashboard db, HighScore hs, 
+    public Renderer(IOptions<Config> cfg)
     {
         // _db = db;
         (_opt, _, _, _visual, _mapOpts) = cfg.Value;
         if (_visual.UseDashboard) _xOffset = 4;
-        // Render += (sender, args) =>
-        // {
-        // (int x, int y) = args.Position;
-        // Console.SetCursorPosition(y, x);
-        // Console.Write(args.Character);
-        // };
     }
     public void RendorMapPartial(int x, int y, TileType value)
     {
@@ -63,8 +61,8 @@ class Renderer
         var lens = headers.Select(q => q.Length).ToArray();
         var vals = new List<string> { _db.SpeedDisplay, _db.CurrentLength + "", _db.Sw.Elapsed.ToString("mm\\:ss"), _hs + "" };
         if (_opt.UseLevel) vals.Insert(0, _db.Level + "");
-        var qq = lens.Zip(vals, (q, w) => w.PadLeft(q));
-        var bodyline = $"| {string.Join(" | ", qq)} |";
+        var valWithPads = lens.Zip(vals, (q, w) => w.PadLeft(q));
+        var bodyline = $"| {string.Join(" | ", valWithPads)} |";
 
         Console.WriteLine(headline);
         Console.WriteLine(separator);

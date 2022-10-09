@@ -11,19 +11,17 @@ class Snake
     readonly System.Timers.Timer Timer;
     readonly IMap TheMap;
     readonly string Border;
-    readonly Gameplay _opt; readonly GameplayMotor _motor; readonly GameplayLevel _lvl; readonly Visual _visual; readonly VisualMap _mapOpts;
-    readonly HighScore _hs;
-    readonly Renderer _rdr;
-    readonly Dashboard _db;
-    public Snake(IOptions<Config> cfg, HighScore hs, IMap map, Renderer renderer, Dashboard db)
+    readonly Gameplay _opt;
+    readonly GameplayMotor _motor;
+    readonly VisualMap _mapOpts;
+    readonly Dashboard _board;
+    public Snake(IOptions<Config> cfg, IMap map, Dashboard board)
     {
-        _db = db;
-        _hs = hs;
-        (_opt, _lvl, _motor, _visual, _mapOpts) = cfg.Value;
+        _board = board;
+        (_opt, _, _motor, _, _mapOpts) = cfg.Value;
         Timer = new System.Timers.Timer(_motor.StartingSpeed);
         TheMap = map;
         Border = string.Join(' ', Enumerable.Repeat<string>(_mapOpts.Wall, _mapOpts.SideLength + 2));
-        _rdr = renderer;
     }
     internal void Start()
     {
@@ -70,20 +68,20 @@ class Snake
         bool canMarchByKey = (_motor.MotorEnum & MotorEnum.ByKey) > 0;
         if (isMarchByKey && !canMarchByKey) return;
         if (Dir == SpeedDirection.None) return;
-        if (!_db.Sw.IsRunning) _db.Sw.Restart();
+        if (!_board.Sw.IsRunning) _board.Sw.Restart();
         TheMap[Head] = TileType.Body;
         (Head.X, Head.Y, var isHit) = CanPassWall(Dir, TheMap);
         if (isHit && !_opt.CanPassWall) { Reset(); return; }
         if (Head == Crate)
         {
-            ++_db.CurrentLength;
+            ++_board.CurrentLength;
             if (Steps.Count == TheMap.Length - 1) { Reset(); return; } // Win condition
             NextCrate();
         }
         if (TheMap[Head] == TileType.Body) { Reset(); return; } // Loss condition, seems a bit early to put it here...
         Steps.Enqueue(Head);
         TheMap[Head] = TileType.Head;
-        if (Steps.Count > _db.CurrentLength)
+        if (Steps.Count > _board.CurrentLength)
         {
             var isOut = Steps.TryDequeue(out var step);
             if (isOut) TheMap[step] = TileType.None;
@@ -100,18 +98,7 @@ class Snake
 
     void NextCrate()
     {
-        if (_opt.UseLevel
-            && (_db.CurrentLength % _lvl.Threshold) == 0
-            && (_db.Level + 1) < _lvl.Levels.Count)
-        {
-            var speedLevel = _lvl.Levels[++_db.Level];
-            bool canMarchByTimer = (_motor.MotorEnum & MotorEnum.ByTimer) > 0;
-            if (canMarchByTimer && _motor.UseLevelAccelerator)
-            {
-                _db.SetSpeedDisplay(speedLevel); // = GetSpeedDisplay(speedLevel);
-                Timer.Interval = _motor.StartingSpeed / speedLevel;
-            }
-        }
+        _board.LevelUp(Timer);
         Crate = NextCrate(_mapOpts.SideLength);
         while (TheMap[Crate] > 0)
             Crate = NextCrate(_mapOpts.SideLength);
@@ -127,14 +114,12 @@ class Snake
         TheMap[0, 0] = TileType.Head;
         Head = default;
         Crate = default;
-        _db.Reset();
         Timer.Interval = _motor.StartingSpeed;
         Steps.Enqueue(Head);
-        _hs.SetHighScore();
         while (Crate == default)
             Crate = NextCrate(_mapOpts.SideLength);
         TheMap[Crate] = TileType.Crate;
-        _rdr.ClearAll(TheMap, _hs, _db);
+        _board.ResetAndReRenderAll(TheMap);
     }
     // void RenderAll()
     // {
