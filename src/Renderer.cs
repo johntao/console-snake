@@ -2,25 +2,12 @@ using Microsoft.Extensions.Options;
 
 class Renderer
 {
-    // public class RenderArgs : EventArgs
-    // {
-    //     public (int X, int Y) Position { get; set; }
-    //     internal TileType TileType { get; set; }
-    // }
-    // public event EventHandler? Render;
-    // Render += (sender, args) =>
-    // {
-    // (int x, int y) = args.Position;
-    // Console.SetCursorPosition(y, x);
-    // Console.Write(args.Character);
-    // };
     readonly VisualMap _mapOpts;
     readonly Visual _visual;
     readonly Gameplay _opt;
     readonly int _xOffset;
     public Renderer(IOptions<Config> cfg)
     {
-        // _db = db;
         (_opt, _, _, _visual, _mapOpts) = cfg.Value;
         if (_visual.UseDashboard) _xOffset = 4;
     }
@@ -32,7 +19,7 @@ class Renderer
 
     private string TileToString(TileType tile) => tile switch
     {
-        TileType.Crate => _mapOpts.Crate,
+        TileType.Food => _mapOpts.Crate,
         TileType.Head => _mapOpts.Head,
         TileType.Body => _mapOpts.Body,
         _ => _mapOpts.None
@@ -59,7 +46,7 @@ class Renderer
         var separator = new string(headline.Select(q => q == '|' ? '|' : '-').ToArray());
 
         var lens = headers.Select(q => q.Length).ToArray();
-        var vals = new List<string> { _db.SpeedDisplay, _db.CurrentLength + "", _db.Sw.Elapsed.ToString("mm\\:ss"), _hs + "" };
+        var vals = new List<string> { _db.SpeedDisplay, _db.CurrentSnakeLength + "", _db.Stopwatch.Elapsed.ToString("mm\\:ss"), _hs + "" };
         if (_opt.UseLevel) vals.Insert(0, _db.Level + "");
         var valWithPads = lens.Zip(vals, (q, w) => w.PadLeft(q));
         var bodyline = $"| {string.Join(" | ", valWithPads)} |";

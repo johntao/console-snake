@@ -16,7 +16,7 @@ class Dashboard
     //| Lvl | Speed | Len | Time | HighScore |
     //| Speed | Len | Time | HighScore |
     private int _currentLength;
-    public int CurrentLength
+    public int CurrentSnakeLength
     {
         get => _currentLength;
         set
@@ -35,7 +35,7 @@ class Dashboard
             if (_opt.UseLevel) _rdr.RendorDashboardPartial(2, (value + "").PadLeft(3));
         }
     }
-    public Stopwatch Sw { get; }
+    public Stopwatch Stopwatch { get; }
     readonly GameplayLevel _lvl;
     readonly GameplayMotor _motor;
     readonly Gameplay _opt;
@@ -54,13 +54,13 @@ class Dashboard
         BoardTimer.Elapsed += BoardTimerTick;
         _hs = hs;
         _rdr = rdr;
-        Sw = new Stopwatch();
+        Stopwatch = new Stopwatch();
         (_opt, _lvl, _motor, _, _) = cfg.Value;
         if (_opt.UseLevel) _yOffset = 6;
         Level = _lvl.DefaultLevel;
     }
     void BoardTimerTick(object? sender, EventArgs e)
-        => _rdr.RendorDashboardPartial(17 + _yOffset, Sw.Elapsed.ToString("mm\\:ss"));
+        => _rdr.RendorDashboardPartial(17 + _yOffset, Stopwatch.Elapsed.ToString("mm\\:ss"));
     internal void ResetAndReRenderAll(IMap map)
     {
         _hs.SetHighScore(this);
@@ -81,14 +81,14 @@ class Dashboard
         if (!HasHitThreshold() || !HasHitLevelCap())
             return;
         var speedLevel = _lvl.Levels[++Level];
-        bool canMarchByTimer = (_motor.MotorEnum & MotorEnum.ByTimer) > 0;
-        if (canMarchByTimer && _motor.UseLevelAccelerator)
+        bool canMoveByTimer = (_motor.MotorEnum & MotorEnum.ByTimer) > 0;
+        if (canMoveByTimer && _motor.UseLevelAccelerator)
         {
             SetSpeedDisplay(speedLevel);
             timer.Interval = _motor.StartingSpeed / speedLevel;
         }
 
-        bool HasHitThreshold() => (CurrentLength % _lvl.Threshold) == 0;
+        bool HasHitThreshold() => (CurrentSnakeLength % _lvl.Threshold) == 0;
         bool HasHitLevelCap() => (Level + 1) < _lvl.Levels.Count;
     }
 }

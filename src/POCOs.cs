@@ -1,7 +1,7 @@
 
 enum SpeedDirection { None, Up, Down, Left, Right }
 
-enum TileType { None, Body, Head, Crate }
+enum TileType { None, Body, Head, Food }
 
 public enum MotorEnum { None, ByKey, ByTimer, ByTimerAndKey, }
 

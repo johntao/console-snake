@@ -28,24 +28,24 @@ class HighScore
     }
     public void SetHighScore(Dashboard board)
     {
-        board.Sw.Stop();
-        var time = board.Sw.Elapsed.ToString("mm\\:ss");
-        board.Sw.Reset();
-        bool isFirstRun = board.CurrentLength == 0;
-        if (isFirstRun || board.CurrentLength < MaxLength)
+        board.Stopwatch.Stop();
+        var time = board.Stopwatch.Elapsed.ToString("mm\\:ss");
+        board.Stopwatch.Reset();
+        bool isFirstRun = board.CurrentSnakeLength == 0;
+        if (isFirstRun || board.CurrentSnakeLength < MaxLength)
         {
-            board.CurrentLength = _startLength;
+            board.CurrentSnakeLength = _startLength;
         }
-        else if (board.CurrentLength == MaxLength)
+        else if (board.CurrentSnakeLength == MaxLength)
         {
-            board.CurrentLength = _startLength;
+            board.CurrentSnakeLength = _startLength;
             if (time.CompareTo(MinTime) < 0)
                 MinTime = time;
         }
-        else if (board.CurrentLength > MaxLength)
+        else if (board.CurrentSnakeLength > MaxLength)
         {
-            MaxLength = board.CurrentLength;
-            board.CurrentLength = _startLength;
+            MaxLength = board.CurrentSnakeLength;
+            board.CurrentSnakeLength = _startLength;
             MinTime = time;
         }
         HighScoreText = $"{MaxLength}@{MinTime}";
