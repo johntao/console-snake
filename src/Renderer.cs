@@ -2,33 +2,33 @@ using Microsoft.Extensions.Options;
 
 class Renderer
 {
-    readonly VisualMap _mapOpts;
-    readonly Visual _visual;
-    readonly Gameplay _opt;
+    readonly VisualMap _optMap;
+    readonly Visual _optVisual;
+    readonly Gameplay _optGameplay;
     readonly int _xOffset;
-    public Renderer(IOptions<Config> cfg)
+    public Renderer(IOptions<Config> cfgRoot)
     {
-        (_opt, _, _, _visual, _mapOpts) = cfg.Value;
-        if (_visual.UseDashboard) _xOffset = 4;
+        (_optGameplay, _, _, _optVisual, _optMap) = cfgRoot.Value;
+        if (_optVisual.UseDashboard) _xOffset = 4;
     }
-    public void RendorMapPartial(int x, int y, TileType value)
+    public void RendorMapPartial(int row, int col, TileType value)
     {
-        Console.SetCursorPosition(y * 2, x + _xOffset);
+        Console.SetCursorPosition(col * 2, row + _xOffset);
         Console.Write(TileToString(value));
     }
 
     private string TileToString(TileType tile) => tile switch
     {
-        TileType.Food => _mapOpts.Crate,
-        TileType.Head => _mapOpts.Head,
-        TileType.Body => _mapOpts.Body,
-        _ => _mapOpts.None
+        TileType.Food => _optMap.Crate,
+        TileType.Head => _optMap.Head,
+        TileType.Body => _optMap.Body,
+        _ => _optMap.None
     };
 
-    public void ClearAll(IMap map, HighScore _hs, Dashboard _db)
+    public void ClearAll(IMap map, HighScore highScore, Dashboard board)
     {
         Console.Clear();
-        if (_visual.UseDashboard) RendorDashboard(_hs, _db);
+        if (_optVisual.UseDashboard) RendorDashboard(highScore, board);
         for (int i = 0; i <= map.BottomBound; i++)
         {
             var arr = map[i].ToArray().Select(q => TileToString(q));
@@ -37,17 +37,17 @@ class Renderer
         Console.WriteLine();
     }
 
-    private void RendorDashboard(HighScore _hs, Dashboard _db)
+    private void RendorDashboard(HighScore highScore, Dashboard board)
     {
         //Level, Speed, Length, Time, HighScore
         var headers = new List<string> { "Speed ", "Len", "Time ", "HighScore" };
-        if (_opt.UseLevel) headers.Insert(0, "Lvl");
+        if (_optGameplay.UseLevel) headers.Insert(0, "Lvl");
         var headline = $"| {string.Join(" | ", headers)} |";
         var separator = new string(headline.Select(q => q == '|' ? '|' : '-').ToArray());
 
         var lens = headers.Select(q => q.Length).ToArray();
-        var vals = new List<string> { _db.SpeedDisplay, _db.CurrentSnakeLength + "", _db.Stopwatch.Elapsed.ToString("mm\\:ss"), _hs + "" };
-        if (_opt.UseLevel) vals.Insert(0, _db.Level + "");
+        var vals = new List<string> { board.SpeedDisplay, board.CurrentSnakeLength + "", board.Stopwatch.Elapsed.ToString("mm\\:ss"), highScore + "" };
+        if (_optGameplay.UseLevel) vals.Insert(0, board.Level + "");
         var valWithPads = lens.Zip(vals, (q, w) => w.PadLeft(q));
         var bodyline = $"| {string.Join(" | ", valWithPads)} |";
 
@@ -56,9 +56,9 @@ class Renderer
         Console.WriteLine(bodyline);
         Console.WriteLine();
     }
-    public void RendorDashboardPartial(int y, string value)
+    public void RendorDashboardPartial(int col, string value)
     {
-        Console.SetCursorPosition(y, 2);
+        Console.SetCursorPosition(col, 2);
         Console.Write(value);
     }
 }

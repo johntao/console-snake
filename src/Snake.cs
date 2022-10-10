@@ -4,29 +4,29 @@ using Microsoft.Extensions.Options;
 class Snake
 {
     static readonly Random Rand = new Random();
-    static (int X, int Y) Head, Food;
+    static (int row, int col) Head, Food;
     static SpeedDirection Dir;
-    static readonly ConcurrentQueue<(int X, int Y)> Bodies = new ConcurrentQueue<(int X, int Y)>();
+    static readonly ConcurrentQueue<(int row, int col)> Bodies = new ConcurrentQueue<(int row, int col)>();
     readonly System.Timers.Timer MoveTimer;
     readonly IMap TheMap;
     readonly string Border;
-    readonly Gameplay _opt;
-    readonly GameplayMotor _motor;
-    readonly VisualMap _mapOpts;
+    readonly Gameplay _optGameplay;
+    readonly GameplayMotor _optMotor;
+    readonly VisualMap _optMaps;
     readonly Dashboard _board;
     public Snake(IOptions<Config> cfg, IMap map, Dashboard board)
     {
         _board = board;
-        (_opt, _, _motor, _, _mapOpts) = cfg.Value;
-        MoveTimer = new System.Timers.Timer(_motor.StartingSpeed);
+        (_optGameplay, _, _optMotor, _, _optMaps) = cfg.Value;
+        MoveTimer = new System.Timers.Timer(_optMotor.StartingSpeed);
         TheMap = map;
-        Border = string.Join(' ', Enumerable.Repeat<string>(_mapOpts.Wall, _mapOpts.SideLength + 2));
+        Border = string.Join(' ', Enumerable.Repeat<string>(_optMaps.Wall, _optMaps.SideLength + 2));
     }
     private static AutoResetEvent MoveWaiter = new AutoResetEvent(false);
     internal void Start()
     {
         Console.CursorVisible = false;
-        bool canMoveByTimer = (_motor.MotorEnum & MotorEnum.ByTimer) > 0;
+        bool canMoveByTimer = (_optMotor.MotorEnum & MotorEnum.ByTimer) > 0;
         if (canMoveByTimer)
         {
             MoveTimer.Elapsed += Move;
@@ -38,7 +38,7 @@ class Snake
             var key = Console.ReadKey().Key;
             if (key is ConsoleKey.Escape) return;
             Dir = ChangeDirection(key, Dir);
-            bool canMoveByKey = (_motor.MotorEnum & MotorEnum.ByKey) > 0;
+            bool canMoveByKey = (_optMotor.MotorEnum & MotorEnum.ByKey) > 0;
             if (canMoveByKey) Move(null, EventArgs.Empty);
             MoveWaiter.WaitOne();
         }
@@ -56,8 +56,8 @@ class Snake
         if (Dir == SpeedDirection.None) return;
         if (!_board.Stopwatch.IsRunning) _board.Stopwatch.Restart(); // Start once user changed the direction
         TheMap[Head] = TileType.Body; // Mark old head position as bodyTile
-        (Head.X, Head.Y, var isHit) = StepForward(Dir, TheMap); // Move head, check if hitBorder
-        if (isHit && !_opt.CanPassWall) { Reset(); return; } // Loss condition
+        (Head.row, Head.col, var isHit) = StepForward(Dir, TheMap); // Move head, check if hitBorder
+        if (isHit && !_optGameplay.CanPassWall) { Reset(); return; } // Loss condition
         Bodies.Enqueue(Head); // Enqueue the new snake head
         if (TheMap[Head] is TileType.Food)
         {
@@ -76,22 +76,22 @@ class Snake
         MoveWaiter.Set();
         static (int x, int y, bool isHit) StepForward(SpeedDirection dir, IMap map) => dir switch
         {
-            SpeedDirection.Up when Head.X-- == map.TopBound => (map.BottomBound, Head.Y, true),
-            SpeedDirection.Down when Head.X++ == map.BottomBound => (map.TopBound, Head.Y, true),
-            SpeedDirection.Left when Head.Y-- == map.LeftBound => (Head.X, map.RightBound, true),
-            SpeedDirection.Right when Head.Y++ == map.RightBound => (Head.X, map.LeftBound, true),
-            _ => (Head.X, Head.Y, false)
+            SpeedDirection.Up when Head.row-- == map.TopBound => (map.BottomBound, Head.col, true),
+            SpeedDirection.Down when Head.row++ == map.BottomBound => (map.TopBound, Head.col, true),
+            SpeedDirection.Left when Head.col-- == map.LeftBound => (Head.row, map.RightBound, true),
+            SpeedDirection.Right when Head.col++ == map.RightBound => (Head.row, map.LeftBound, true),
+            _ => (Head.row, Head.col, false)
         };
     }
     void NextFood()
     {
         _board.LevelUp(MoveTimer);
-        Food = RandomPlace(_mapOpts.SideLength);
+        Food = RandomPlace(_optMaps.SideLength);
         while (TheMap[Food] > 0)
-            Food = RandomPlace(_mapOpts.SideLength);
+            Food = RandomPlace(_optMaps.SideLength);
         TheMap[Food] = TileType.Food;
     }
-    static (int X, int Y) RandomPlace(int max) => (Rand.Next(max), Rand.Next(max));
+    static (int row, int col) RandomPlace(int max) => (Rand.Next(max), Rand.Next(max));
     void Reset()
     {
         TheMap.Clear();
@@ -100,10 +100,10 @@ class Snake
         TheMap[0, 0] = TileType.Head;
         Head = default;
         Food = default;
-        MoveTimer.Interval = _motor.StartingSpeed;
+        MoveTimer.Interval = _optMotor.StartingSpeed;
         Bodies.Enqueue(Head);
         while (Food == default)
-            Food = RandomPlace(_mapOpts.SideLength);
+            Food = RandomPlace(_optMaps.SideLength);
         TheMap[Food] = TileType.Food;
         MoveWaiter.Set();
         _board.ResetAndReRenderAll(TheMap);

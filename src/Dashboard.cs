@@ -10,7 +10,7 @@ class Dashboard
         set
         {
             _speedDisplay = value;
-            _rdr.RendorDashboardPartial(2 + _yOffset, (value + "").PadLeft(6));
+            _renderer.RendorDashboardPartial(2 + _yOffset, (value + "").PadLeft(6));
         }
     }
     //| Lvl | Speed | Len | Time | HighScore |
@@ -22,7 +22,7 @@ class Dashboard
         set
         {
             _currentLength = value;
-            _rdr.RendorDashboardPartial(11 + _yOffset, (value + "").PadLeft(3));
+            _renderer.RendorDashboardPartial(11 + _yOffset, (value + "").PadLeft(3));
         }
     }
     private int _level;
@@ -32,19 +32,19 @@ class Dashboard
         set
         {
             _level = value;
-            if (_opt.UseLevel) _rdr.RendorDashboardPartial(2, (value + "").PadLeft(3));
+            if (_optGamplay.UseLevel) _renderer.RendorDashboardPartial(2, (value + "").PadLeft(3));
         }
     }
     public Stopwatch Stopwatch { get; }
     readonly GameplayLevel _lvl;
     readonly GameplayMotor _motor;
-    readonly Gameplay _opt;
-    readonly Renderer _rdr;
+    readonly Gameplay _optGamplay;
+    readonly Renderer _renderer;
     readonly int _yOffset;
-    readonly HighScore _hs;
+    readonly HighScore _highscore;
     readonly System.Timers.Timer BoardTimer;
     // readonly Visual _visual;
-    public Dashboard(IOptions<Config> cfg, Renderer rdr, HighScore hs)
+    public Dashboard(IOptions<Config> cfgRoot, Renderer renderer, HighScore highScore)
     {
         BoardTimer = new System.Timers.Timer
         {
@@ -52,21 +52,21 @@ class Dashboard
             Interval = 1000,
         };
         BoardTimer.Elapsed += BoardTimerTick;
-        _hs = hs;
-        _rdr = rdr;
+        _highscore = highScore;
+        _renderer = renderer;
         Stopwatch = new Stopwatch();
-        (_opt, _lvl, _motor, _, _) = cfg.Value;
-        if (_opt.UseLevel) _yOffset = 6;
+        (_optGamplay, _lvl, _motor, _, _) = cfgRoot.Value;
+        if (_optGamplay.UseLevel) _yOffset = 6;
         Level = _lvl.DefaultLevel;
     }
     void BoardTimerTick(object? sender, EventArgs e)
-        => _rdr.RendorDashboardPartial(17 + _yOffset, Stopwatch.Elapsed.ToString("mm\\:ss"));
+        => _renderer.RendorDashboardPartial(17 + _yOffset, Stopwatch.Elapsed.ToString("mm\\:ss"));
     internal void ResetAndReRenderAll(IMap map)
     {
-        _hs.SetHighScore(this);
+        _highscore.SetHighScore(this);
         Level = _lvl.DefaultLevel;
         SetSpeedDisplay(1);
-        _rdr.ClearAll(map, _hs, this);
+        _renderer.ClearAll(map, _highscore, this);
     }
 
     internal void SetSpeedDisplay(double speedLevel)
@@ -77,7 +77,7 @@ class Dashboard
 
     internal void LevelUp(System.Timers.Timer timer)
     {
-        if (!_opt.UseLevel) return;
+        if (!_optGamplay.UseLevel) return;
         if (!HasHitThreshold() || !HasHitLevelCap())
             return;
         var speedLevel = _lvl.Levels[++Level];
