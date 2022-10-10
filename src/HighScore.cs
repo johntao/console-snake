@@ -23,7 +23,7 @@ class HighScore
         private set
         {
             _highScoreText = value;
-            if (_opt.UseLevel) _rdr.RendorDashboardPartial(23 + _yOffset, (value + "").PadLeft(9));
+            if (_opt.UseLevel) _rdr.RendorDashboardPartial(24 + _yOffset, (value + "").PadLeft(9));
         }
     }
     public void SetHighScore(Dashboard board)

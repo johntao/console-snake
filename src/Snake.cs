@@ -8,7 +8,7 @@ class Snake
     static (int X, int Y) Head, Crate;
     static SpeedDirection Dir;
     static readonly ConcurrentQueue<(int X, int Y)> Steps = new ConcurrentQueue<(int X, int Y)>();
-    readonly System.Timers.Timer Timer;
+    readonly System.Timers.Timer SnakeTimer;
     readonly IMap TheMap;
     readonly string Border;
     readonly Gameplay _opt;
@@ -19,7 +19,7 @@ class Snake
     {
         _board = board;
         (_opt, _, _motor, _, _mapOpts) = cfg.Value;
-        Timer = new System.Timers.Timer(_motor.StartingSpeed);
+        SnakeTimer = new System.Timers.Timer(_motor.StartingSpeed);
         TheMap = map;
         Border = string.Join(' ', Enumerable.Repeat<string>(_mapOpts.Wall, _mapOpts.SideLength + 2));
     }
@@ -29,8 +29,8 @@ class Snake
         bool canMarchByTimer = (_motor.MotorEnum & MotorEnum.ByTimer) > 0;
         if (canMarchByTimer)
         {
-            Timer.Elapsed += March;
-            Timer.Enabled = true;
+            SnakeTimer.Elapsed += March;
+            SnakeTimer.Enabled = true;
         }
         Reset();
         while (true)
@@ -39,7 +39,6 @@ class Snake
             if (key is ConsoleKey.Escape) return;
             Dir = ChangeDirection(key, Dir);
             March(null, EventArgs.Empty);
-            // March2(Dir);
         }
         static SpeedDirection ChangeDirection(ConsoleKey key, SpeedDirection dir) => key switch
         {
@@ -51,16 +50,6 @@ class Snake
         };
     }
 
-    // private void March2(SpeedDirection dir)
-    // {
-    //     switch (dir)
-    //     {
-    //         case SpeedDirection.Up: Console.CursorTop--; break;
-    //         case SpeedDirection.Down: Console.CursorTop++; break;
-    //         case SpeedDirection.Right: Console.CursorLeft++; break;
-    //         case SpeedDirection.Left: Console.CursorLeft--; break;
-    //     }
-    // }
 
     void March(object? sender, EventArgs e)
     {
@@ -70,7 +59,7 @@ class Snake
         if (Dir == SpeedDirection.None) return;
         if (!_board.Sw.IsRunning) _board.Sw.Restart();
         TheMap[Head] = TileType.Body;
-        (Head.X, Head.Y, var isHit) = CanPassWall(Dir, TheMap);
+        (Head.X, Head.Y, var isHit) = StepForward(Dir, TheMap);
         if (isHit && !_opt.CanPassWall) { Reset(); return; }
         if (Head == Crate)
         {
@@ -86,7 +75,7 @@ class Snake
             var isOut = Steps.TryDequeue(out var step);
             if (isOut) TheMap[step] = TileType.None;
         }
-        static (int x, int y, bool isHit) CanPassWall(SpeedDirection dir, IMap map) => dir switch
+        static (int x, int y, bool isHit) StepForward(SpeedDirection dir, IMap map) => dir switch
         {
             SpeedDirection.Up when Head.X-- == map.TopBound => (map.BottomBound, Head.Y, true),
             SpeedDirection.Down when Head.X++ == map.BottomBound => (map.TopBound, Head.Y, true),
@@ -98,7 +87,7 @@ class Snake
 
     void NextCrate()
     {
-        _board.LevelUp(Timer);
+        _board.LevelUp(SnakeTimer);
         Crate = NextCrate(_mapOpts.SideLength);
         while (TheMap[Crate] > 0)
             Crate = NextCrate(_mapOpts.SideLength);
@@ -114,7 +103,7 @@ class Snake
         TheMap[0, 0] = TileType.Head;
         Head = default;
         Crate = default;
-        Timer.Interval = _motor.StartingSpeed;
+        SnakeTimer.Interval = _motor.StartingSpeed;
         Steps.Enqueue(Head);
         while (Crate == default)
             Crate = NextCrate(_mapOpts.SideLength);

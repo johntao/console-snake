@@ -53,7 +53,7 @@ class Renderer
     private void RendorDashboard(HighScore _hs, Dashboard _db)
     {
         //Level, Speed, Length, Time, HighScore
-        var headers = new List<string> { "Speed", "Len", "Time ", "HighScore" };
+        var headers = new List<string> { "Speed ", "Len", "Time ", "HighScore" };
         if (_opt.UseLevel) headers.Insert(0, "Lvl");
         var headline = $"| {string.Join(" | ", headers)} |";
         var separator = new string(headline.Select(q => q == '|' ? '|' : '-').ToArray());
