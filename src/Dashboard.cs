@@ -42,7 +42,7 @@ class Dashboard
     readonly Renderer _renderer;
     readonly int _yOffset;
     readonly HighScore _highscore;
-    readonly System.Timers.Timer BoardTimer;
+    internal readonly System.Timers.Timer BoardTimer;
     // readonly Visual _visual;
     public Dashboard(IOptions<Config> cfgRoot, Renderer renderer, HighScore highScore)
     {

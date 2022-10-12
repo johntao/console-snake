@@ -2,8 +2,9 @@ using Microsoft.Extensions.Configuration;
 using Tomlyn.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Tomlyn;
-using IHost host = Host.CreateDefaultBuilder(args)
+await Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration(q =>
     {
         var path = Path.Join(Directory.GetCurrentDirectory(), "appsettings.toml");
@@ -16,8 +17,10 @@ using IHost host = Host.CreateDefaultBuilder(args)
         q.SetBasePath(Directory.GetCurrentDirectory())
                     .AddTomlFile("appsettings.toml", optional: true, reloadOnChange: true);
     })
+    .ConfigureLogging(q => q.ClearProviders())
     .ConfigureServices((q, s) => s
-        .AddSingleton<Snake>()
+        .AddHostedService<Snake>()
+        .Configure<HostOptions>(q => q.ShutdownTimeout = TimeSpan.FromMilliseconds(200))
         .AddSingleton<HighScore>()
         .AddSingleton<Renderer>()
         .AddSingleton<Dashboard>()
@@ -25,8 +28,6 @@ using IHost host = Host.CreateDefaultBuilder(args)
         .Configure<Config>(q.Configuration)
         .Configure<Config>(q => q.GameplayMotor.MotorEnum = (MotorEnum)q.GameplayMotor.MotorType)
         )
-    .Build();
-var game = host.Services.GetRequiredService<Snake>();
-game.Start();
+    .RunConsoleAsync();
 
-// await host.RunAsync();
+

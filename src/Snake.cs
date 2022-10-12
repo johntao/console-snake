@@ -1,7 +1,8 @@
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
-class Snake
+class Snake : BackgroundService
 {
     static readonly Random Rand = new Random();
     static (int row, int col) Head, Food;
@@ -14,8 +15,10 @@ class Snake
     readonly GameplayMotor _optMotor;
     readonly VisualMap _optMaps;
     readonly Dashboard _board;
-    public Snake(IOptions<Config> cfg, IMap map, Dashboard board)
+    readonly IHostApplicationLifetime appLifetime;
+    public Snake(IOptions<Config> cfg, IMap map, Dashboard board, IHostApplicationLifetime appLifetime)
     {
+        this.appLifetime = appLifetime;
         _board = board;
         (_optGameplay, _, _optMotor, _, _optMaps) = cfg.Value;
         MoveTimer = new System.Timers.Timer(_optMotor.StartingSpeed);
@@ -23,24 +26,42 @@ class Snake
         Border = string.Join(' ', Enumerable.Repeat<string>(_optMaps.Wall, _optMaps.SideLength + 2));
     }
     private static AutoResetEvent MoveWaiter = new AutoResetEvent(false);
-    internal void Start()
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) => Task.Run(Start);
+    public override Task StopAsync(CancellationToken cancellationToken)
     {
-        Console.CursorVisible = false;
-        bool canMoveByTimer = (_optMotor.MotorEnum & MotorEnum.ByTimer) > 0;
-        if (canMoveByTimer)
+        Console.Clear();
+        Console.WriteLine("Shutting Down...");
+        return base.StopAsync(cancellationToken);
+    }
+    // private void Start(object? state)
+    private void Start()
+    {
+        // var stoppingToken = (CancellationToken)state!;
+        try
         {
-            MoveTimer.Elapsed += Move;
-            MoveTimer.Enabled = true;
+            Console.CursorVisible = false;
+            bool canMoveByTimer = (_optMotor.MotorEnum & MotorEnum.ByTimer) > 0;
+            if (canMoveByTimer)
+            {
+                MoveTimer.Elapsed += Move;
+                MoveTimer.Enabled = true;
+            }
+            Reset();
+            // while (!stoppingToken.IsCancellationRequested)
+            while (true)
+            {
+                var key = Console.ReadKey().Key;
+                if (key is ConsoleKey.Escape) { appLifetime.StopApplication(); return; }
+                Dir = ChangeDirection(key, Dir);
+                bool canMoveByKey = (_optMotor.MotorEnum & MotorEnum.ByKey) > 0;
+                if (canMoveByKey) Move(null, EventArgs.Empty);
+                MoveWaiter.WaitOne();
+            }
         }
-        Reset();
-        while (true)
+        finally
         {
-            var key = Console.ReadKey().Key;
-            if (key is ConsoleKey.Escape) return;
-            Dir = ChangeDirection(key, Dir);
-            bool canMoveByKey = (_optMotor.MotorEnum & MotorEnum.ByKey) > 0;
-            if (canMoveByKey) Move(null, EventArgs.Empty);
-            MoveWaiter.WaitOne();
+            MoveTimer.Dispose();
+            _board.BoardTimer.Dispose();
         }
         static SpeedDirection ChangeDirection(ConsoleKey key, SpeedDirection dir) => key switch
         {
@@ -70,8 +91,8 @@ class Snake
             var isOut = Bodies.TryDequeue(out var body); // Dequeue the snake tail
             if (isOut) TheMap[body] = TileType.None;
         }
-        // Loss condition, this one MUST followed after dequeue, in order to handle straight line full-width snake case.
-        if (TheMap[Head] == TileType.Body) { Reset(); return; }
+        // Loss condition, this one MUST put after dequeue, in order to handle straight line full-width snake case.
+        if (TheMap[Head] is TileType.Body) { Reset(); return; }
         TheMap[Head] = TileType.Head; // Mark new head position as headTile
         MoveWaiter.Set();
         static (int x, int y, bool isHit) StepForward(SpeedDirection dir, IMap map) => dir switch
