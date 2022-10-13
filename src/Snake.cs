@@ -54,7 +54,7 @@ class Snake : BackgroundService
             var key = Console.ReadKey().Key;
             if (key is ConsoleKey.Escape) { appLifetime.StopApplication(); return; }
             Dir = ChangeDirection(key, Dir);
-            bool canMoveByKey = (_optMotor.MotorEnum & MotorEnum.ByKey) > 0;
+            var canMoveByKey = (_optMotor.MotorEnum & MotorEnum.ByKey) > 0;
             if (canMoveByKey) Move(null, EventArgs.Empty);
             MoveWaiter.WaitOne();
         }
@@ -95,10 +95,11 @@ class Snake : BackgroundService
                 NextFood();
                 break;
             case TileType.Body:
-                if (TheMap[Head] != TheMap[Bodies.Last()]) return GameResult.Loss;
+                Bodies.TryPeek(out var tail);
+                if (Head != tail) return GameResult.Loss;
                 goto case TileType.None;
             case TileType.None:
-                var isOut = Bodies.TryDequeue(out var tail);
+                var isOut = Bodies.TryDequeue(out tail);
                 if (isOut) TheMap[tail] = TileType.None;
                 break;
         }
