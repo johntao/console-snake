@@ -37,7 +37,7 @@ abstract class MapBase : IMap
         BottomBound = opt.SideLength - 1;
         LeftBound = 0;
         RightBound = opt.SideLength - 1;
-        Length = opt.SideLength * opt.SideLength - 1;
+        Length = opt.SideLength * opt.SideLength;
         Renderer = renderer;
     }
 }

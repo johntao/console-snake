@@ -26,7 +26,11 @@ await Host.CreateDefaultBuilder(args)
         .AddSingleton<Dashboard>()
         .AddSingleton<IMap, MapJaggedArray>()
         .Configure<Config>(q.Configuration)
-        .Configure<Config>(q => q.GameplayMotor.MotorEnum = (MotorEnum)q.GameplayMotor.MotorType)
+        .Configure<Config>(q =>
+        {
+            q.GameplayMotor.MotorEnum = (MotorEnum)q.GameplayMotor.MotorType;
+            if (q.GameplayLevel.Levels.Count == 0) q.GameplayLevel.Levels.AddRange(new[] { 1.0, 1.5, 2.0, 2.5, 3.0, 3.5 });
+        })
         )
     .RunConsoleAsync();
 

@@ -3,6 +3,8 @@ enum SpeedDirection { None, Up, Down, Left, Right }
 
 enum TileType { None, Body, Head, Food }
 
+enum GameResult { None, Loss, Win }
+
 public enum MotorEnum { None, ByKey, ByTimer, ByTimerAndKey, }
 
 public class Config
@@ -32,7 +34,7 @@ public class GameplayMotor
 }
 public class GameplayLevel
 {
-    public List<double> Levels { get; set; } = new() { 1.0, 1.5, 2.0, 2.5, 3.0, 3.5 };
+    public List<double> Levels { get; set; } = new();
     public int Threshold { get; set; } = 5;
     public int DefaultLevel { get; set; } = 0;
 }

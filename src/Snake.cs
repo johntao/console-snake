@@ -29,39 +29,34 @@ class Snake : BackgroundService
     protected override Task ExecuteAsync(CancellationToken stoppingToken) => Task.Run(Start);
     public override Task StopAsync(CancellationToken cancellationToken)
     {
+        MoveTimer.Dispose();
+        _board.BoardTimer.Dispose();
         Console.Clear();
         Console.WriteLine("Shutting Down...");
         return base.StopAsync(cancellationToken);
     }
     // private void Start(object? state)
+    // private void Start(CancellationToken stoppingToken)
     private void Start()
     {
         // var stoppingToken = (CancellationToken)state!;
-        try
+        Console.CursorVisible = false;
+        bool canMoveByTimer = (_optMotor.MotorEnum & MotorEnum.ByTimer) > 0;
+        if (canMoveByTimer)
         {
-            Console.CursorVisible = false;
-            bool canMoveByTimer = (_optMotor.MotorEnum & MotorEnum.ByTimer) > 0;
-            if (canMoveByTimer)
-            {
-                MoveTimer.Elapsed += Move;
-                MoveTimer.Enabled = true;
-            }
-            Reset();
-            // while (!stoppingToken.IsCancellationRequested)
-            while (true)
-            {
-                var key = Console.ReadKey().Key;
-                if (key is ConsoleKey.Escape) { appLifetime.StopApplication(); return; }
-                Dir = ChangeDirection(key, Dir);
-                bool canMoveByKey = (_optMotor.MotorEnum & MotorEnum.ByKey) > 0;
-                if (canMoveByKey) Move(null, EventArgs.Empty);
-                MoveWaiter.WaitOne();
-            }
+            MoveTimer.Elapsed += Move;
+            MoveTimer.Enabled = true;
         }
-        finally
+        Reset();
+        // while (!stoppingToken.IsCancellationRequested)
+        while (true)
         {
-            MoveTimer.Dispose();
-            _board.BoardTimer.Dispose();
+            var key = Console.ReadKey().Key;
+            if (key is ConsoleKey.Escape) { appLifetime.StopApplication(); return; }
+            Dir = ChangeDirection(key, Dir);
+            bool canMoveByKey = (_optMotor.MotorEnum & MotorEnum.ByKey) > 0;
+            if (canMoveByKey) Move(null, EventArgs.Empty);
+            MoveWaiter.WaitOne();
         }
         static SpeedDirection ChangeDirection(ConsoleKey key, SpeedDirection dir) => key switch
         {
@@ -77,24 +72,37 @@ class Snake : BackgroundService
         if (Dir == SpeedDirection.None) return;
         if (!_board.Stopwatch.IsRunning) _board.Stopwatch.Restart(); // Start once user changed the direction
         TheMap[Head] = TileType.Body; // Mark old head position as bodyTile
-        (Head.row, Head.col, var isHit) = StepForward(Dir, TheMap); // Move head, check if hitBorder
-        if (isHit && !_optGameplay.CanPassWall) { Reset(); return; } // Loss condition
-        Bodies.Enqueue(Head); // Enqueue the new snake head
-        if (TheMap[Head] is TileType.Food)
+        switch (MoveExec())
         {
-            ++_board.CurrentSnakeLength;
-            if (Bodies.Count == TheMap.Length - 1) { Reset(); return; } // Win condition
-            NextFood();
+            case GameResult.Win:
+            case GameResult.Loss:
+                Reset();
+                return;
         }
-        if (Bodies.Count > _board.CurrentSnakeLength)
-        {
-            var isOut = Bodies.TryDequeue(out var body); // Dequeue the snake tail
-            if (isOut) TheMap[body] = TileType.None;
-        }
-        // Loss condition, this one MUST put after dequeue, in order to handle straight line full-width snake case.
-        if (TheMap[Head] is TileType.Body) { Reset(); return; }
         TheMap[Head] = TileType.Head; // Mark new head position as headTile
         MoveWaiter.Set();
+    }
+    private GameResult MoveExec()
+    {
+        (Head.row, Head.col, var isBorderHit) = StepForward(Dir, TheMap); // Move head, check if the snake hit the border
+        if (isBorderHit && !_optGameplay.CanPassWall) return GameResult.Loss;
+        Bodies.Enqueue(Head); // Enqueue the new snake head
+        switch (TheMap[Head])
+        {
+            case TileType.Food:
+                ++_board.CurrentSnakeLength;
+                if (Bodies.Count == TheMap.Length) return GameResult.Win;
+                NextFood();
+                break;
+            case TileType.Body:
+                if (TheMap[Head] != TheMap[Bodies.Last()]) return GameResult.Loss;
+                goto case TileType.None;
+            case TileType.None:
+                var isOut = Bodies.TryDequeue(out var tail);
+                if (isOut) TheMap[tail] = TileType.None;
+                break;
+        }
+        return GameResult.None;
         static (int x, int y, bool isHit) StepForward(SpeedDirection dir, IMap map) => dir switch
         {
             SpeedDirection.Up when Head.row-- == map.TopBound => (map.BottomBound, Head.col, true),

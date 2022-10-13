@@ -78,7 +78,7 @@ class Dashboard
     internal void LevelUp(System.Timers.Timer timer)
     {
         if (!_optGamplay.UseLevel) return;
-        if (!HasHitThreshold() || !HasHitLevelCap())
+        if (HasHitLevelCap() || !HasHitThreshold())
             return;
         var speedLevel = _lvl.Levels[++Level];
         bool canMoveByTimer = (_motor.MotorEnum & MotorEnum.ByTimer) > 0;
@@ -89,6 +89,6 @@ class Dashboard
         }
 
         bool HasHitThreshold() => (CurrentSnakeLength % _lvl.Threshold) == 0;
-        bool HasHitLevelCap() => (Level + 1) < _lvl.Levels.Count;
+        bool HasHitLevelCap() => (Level + 1) >= _lvl.Levels.Count;
     }
 }
