@@ -3,6 +3,9 @@ enum SpeedDirection { None, Up, Down, Left, Right }
 
 enum TileType { None, Body, Head, Food }
 
+//| Lvl | Speed | Len | Time | HighScore |
+enum DashboardColumn { Level, Speed, Len, Time, HighScore }
+
 enum GameResult { None, Loss, Win }
 
 public enum MotorEnum { None, ByKey, ByTimer, ByTimerAndKey, }

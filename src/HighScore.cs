@@ -6,13 +6,11 @@ class HighScore
     public string MinTime = "99:99";
     readonly int _startLength;
     readonly Gameplay _optGameplay;
-    readonly Renderer _renderer;
-    readonly int _yOffset;
-    public HighScore(IOptions<Config> cfgRoot, Renderer renderer)
+    readonly DivDashboard _div;
+    public HighScore(IOptions<Config> cfgRoot, DivDashboard div)
     {
-        _renderer = renderer;
+        _div = div;
         (_optGameplay, _, _, _, _) = cfgRoot.Value;
-        if (_optGameplay.UseLevel) _yOffset = 7;
         _startLength = cfgRoot.Value.Gameplay.StartingLength;
     }
     //| Lvl | Speed | Len | Time | HighScore |
@@ -23,7 +21,7 @@ class HighScore
         private set
         {
             _highScoreText = value;
-            if (_optGameplay.UseLevel) _renderer.RendorDashboardPartial(24 + _yOffset, (value + "").PadLeft(9));
+            _div.PrintPartial(DashboardColumn.HighScore);
         }
     }
     public void SetHighScore(Dashboard board)
